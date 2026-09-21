@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voyara — Your AI Travel Agency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Outfit:wght@300..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --paper:#FAF4E9; --paper2:#F2E9D8; --card:#FFFDF6;
+  --ink:#14262E; --ink2:#3D5560; --mut:#71858D;
+  --line:#E4D8C2;
+  --flame:#E4572E; --flame-d:#C43F1B;
+  --teal:#0E7C6B; --sky:#37819E; --gold:#DE9A2E; --berry:#A8446B; --moss:#5C8A46;
+  --ok:#1D8A5E; --warn:#C43F1B;
+  --dark:#0E1B23; --dark2:#152631; --cream:#F6EEDC; --creammut:#B9C4C4;
+  --fd:'Fraunces',serif; --fb:'Outfit',sans-serif;
+  --r:18px; --sh:0 12px 32px rgba(20,38,46,.10); --sh2:0 4px 14px rgba(20,38,46,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--fb);font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.045'/></svg>")}
+h1,h2,h3,.fd{font-family:var(--fd)}
+button{font-family:var(--fb);cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:var(--fb);font-size:15px;color:var(--ink);background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;width:100%;transition:border .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+::selection{background:var(--flame);color:#fff}
+svg.ic{width:1.15em;height:1.15em;flex:none;vertical-align:-.2em}
+.hide{display:none!important}
+
+/* ============ COMMON ============ */
+.screen{display:none}.screen.on{display:block;animation:fadeUp .5s cubic-bezier(.2,.7,.2,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.overline{font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--flame)}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:15px;padding:13px 24px;border-radius:999px;transition:transform .16s,box-shadow .16s,background .16s;white-space:nowrap}
+.btn:active{transform:scale(.965)}
+.btn-ink{background:var(--ink);color:var(--cream)}.btn-ink:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,38,46,.28)}
+.btn-flame{background:var(--flame);color:#fff}.btn-flame:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(228,87,46,.35);background:var(--flame-d)}
+.btn-ghost{border:1.5px solid var(--ink);color:var(--ink)}.btn-ghost:hover{background:var(--ink);color:var(--cream)}
+.btn-sm{padding:8px 16px;font-size:13.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 11px;border-radius:999px;border:1.5px solid var(--line);background:var(--card)}
+.pill.demo{border-color:var(--gold);color:#8a5f10;background:#FBF0D8}
+.srcchip{font-size:11.5px;font-weight:600;color:var(--ink2);background:var(--paper2);border-radius:6px;padding:2px 8px;white-space:nowrap}
+.checked{font-size:11.5px;color:var(--mut)}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-weight:500;font-size:14.5px;cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover{border-color:var(--ink2);transform:translateY(-1px)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--cream)}
+.chip.on .ic{color:var(--gold)}
+.chip .ic{color:var(--ink2)}
+.seg{display:inline-flex;flex-wrap:wrap;gap:0;border:1.5px solid var(--line);border-radius:999px;background:var(--card);padding:4px}
+.seg button{padding:8px 16px;border-radius:999px;font-weight:600;font-size:13.5px;color:var(--ink2);transition:all .15s}
+.seg button.on{background:var(--ink);color:var(--cream)}
+.field{margin-bottom:22px}
+.field label{display:block;font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);margin-bottom:9px}
+.hint{font-size:13px;color:var(--mut);margin-top:7px}
+.toastwrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:3000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--ink);color:var(--cream);padding:11px 20px;border-radius:999px;font-size:14px;font-weight:500;display:flex;gap:9px;align-items:center;box-shadow:var(--sh);animation:toastIn .3s cubic-bezier(.2,.9,.3,1.3)}
+.toast .ic{color:var(--gold)}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.modal{position:fixed;inset:0;z-index:2500;background:rgba(14,27,35,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeUp .25s}
+.modal .mbox{background:var(--card);border-radius:22px;max-width:640px;width:100%;max-height:86vh;overflow:auto;box-shadow:var(--sh);position:relative}
+.mclose{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:var(--paper2);display:flex;align-items:center;justify-content:center;z-index:2}
+.mclose:hover{background:var(--ink);color:var(--cream)}
+
+/* ============ SCENES (poster art) ============ */
+.scene{display:block;width:100%;height:100%}
+.scene svg{display:block;width:100%;height:100%}
+.drift{animation:drift 26s linear infinite}
+.drift.d2{animation-duration:38s;animation-delay:-14s}
+@keyframes drift{from{transform:translateX(-60px)}to{transform:translateX(460px)}}
+.bob{animation:bob 5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.gull{animation:bob 3.4s ease-in-out infinite}
+
+/* ============ LANDING ============ */
+.nav{position:sticky;top:0;z-index:900;background:rgba(250,244,233,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:30px;height:66px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-weight:700;font-size:22px;letter-spacing:-.01em}
+.logo svg{width:30px;height:30px}
+.nav a.nl{font-size:14.5px;font-weight:500;color:var(--ink2);text-decoration:none;cursor:pointer}
+.nav a.nl:hover{color:var(--flame)}
+.nav .sp{flex:1}
+.hero{position:relative;overflow:hidden;background:var(--dark)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);min-height:min(88vh,780px)}
+.hero-copy{padding:90px 0 70px 0;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}
+.hero h1{font-size:clamp(46px,5.6vw,84px);line-height:.98;font-weight:560;letter-spacing:-.02em;color:var(--cream);margin:18px 0 24px}
+.hero h1 em{font-style:italic;color:var(--flame);font-weight:400}
+.hero p.sub{font-size:17.5px;color:var(--creammut);max-width:520px;margin-bottom:34px}
+.hero .overline{color:var(--gold)}
+.trust{display:flex;flex-wrap:wrap;gap:10px;margin-top:38px}
+.trust span{font-size:12.5px;color:var(--creammut);border:1px solid rgba(246,238,220,.25);border-radius:999px;padding:6px 13px;display:inline-flex;gap:7px;align-items:center}
+.trust .ic{color:var(--teal)}
+.hero-art{position:relative;min-height:420px}
+.hero-art .scene{position:absolute;inset:0}
+.hero-art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--dark) 0%,transparent 26%)}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+.marquee{background:var(--flame);color:#fff;overflow:hidden;white-space:nowrap;padding:13px 0;border-top:3px solid var(--ink)}
+.marquee-in{display:inline-block;animation:tick 34s linear infinite;font-family:var(--fd);font-size:17px;letter-spacing:.06em}
+.marquee-in b{font-weight:700}.marquee-in i{font-style:normal;opacity:.55;padding:0 20px}
+@keyframes tick{to{transform:translateX(-50%)}}
+.sect{padding:96px 0}
+.sect-head{max-width:640px;margin-bottom:54px}
+.sect-head h2{font-size:clamp(32px,3.6vw,50px);font-weight:560;letter-spacing:-.015em;line-height:1.05;margin-top:14px}
+.how{position:relative}
+.howrow{display:grid;grid-template-columns:repeat(3,1fr);gap:34px;position:relative}
+.howstep{padding-top:26px;border-top:2px solid var(--ink);position:relative}
+.howstep:nth-child(2){transform:translateY(44px)}
+.howstep:nth-child(3){transform:translateY(88px)}
+.howstep .num{font-family:var(--fd);font-size:74px;font-weight:300;font-style:italic;line-height:1;color:var(--flame)}
+.howstep h3{font-size:23px;font-weight:600;margin:14px 0 10px}
+.howstep p{color:var(--ink2);font-size:15px}
+.howpath{position:absolute;top:-8px;left:0;width:100%;height:120px;pointer-events:none}
+.howpath path{stroke:var(--ink2);stroke-width:2;fill:none;stroke-dasharray:5 8}
+.destrow{display:flex;gap:20px;overflow-x:auto;padding:10px 4px 26px;scroll-snap-type:x mandatory}
+.destrow::-webkit-scrollbar{height:8px}.destrow::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+.dcard{flex:0 0 262px;scroll-snap-align:start;background:var(--card);border-radius:20px;overflow:hidden;border:1.5px solid var(--line);cursor:pointer;transition:transform .22s,box-shadow .22s;text-align:left}
+.dcard:hover{transform:translateY(-6px) rotate(-.4deg);box-shadow:var(--sh)}
+.dcard .art{height:158px;position:relative;overflow:hidden}
+.dcard:hover .art svg{transform:scale(1.06)}
+.dcard .art svg{transition:transform .5s}
+.dcard .body{padding:16px 18px 18px}
+.dcard h3{font-size:21px;font-weight:600}
+.dcard .meta{font-size:13px;color:var(--mut);margin-top:3px}
+.dcard .from{margin-top:10px;font-size:13.5px;font-weight:600;color:var(--teal)}
+.realdemo{background:var(--dark);color:var(--cream);border-radius:26px;padding:44px 46px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.realdemo h3{font-size:26px;margin-bottom:14px}
+.realdemo li{list-style:none;display:flex;gap:11px;margin-bottom:11px;font-size:14.5px;color:var(--creammut)}
+.realdemo .ic{margin-top:3px;color:var(--gold)}
+.realdemo .ic.ok{color:#5FBF8F}
+.realdemo .coltag{font-size:11px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;margin-bottom:14px;display:block}
+footer{border-top:1px solid var(--line);padding:44px 0 60px;color:var(--mut);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+
+/* ============ ONBOARDING ============ */
+.ob{min-height:100vh;display:flex;flex-direction:column}
+.ob-top{height:62px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.ob-top .wrap{display:flex;align-items:center;gap:18px;width:100%}
+.ob-prog{flex:1;height:4px;background:var(--line);border-radius:99px;overflow:hidden}
+.ob-prog i{display:block;height:100%;background:var(--flame);border-radius:99px;transition:width .45s cubic-bezier(.3,.8,.3,1)}
+.ob-grid{flex:1;display:grid;grid-template-columns:340px 1fr;max-width:1180px;margin:0 auto;width:100%;padding:40px 28px 80px;gap:56px}
+.rail{position:sticky;top:96px;align-self:start}
+.agent{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:20px;display:flex;gap:14px;box-shadow:var(--sh2)}
+.agent .ava{width:44px;height:44px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;color:var(--gold)}
+.agent .nm{font-weight:700;font-size:14px}
+.agent .nm span{font-weight:500;color:var(--mut);font-size:12px}
+.agent p{font-size:13.5px;color:var(--ink2);margin-top:5px;line-height:1.5}
+.railsteps{margin-top:26px;display:flex;flex-direction:column;gap:2px}
+.rstep{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:12px;font-size:14px;color:var(--mut);font-weight:500;cursor:pointer;transition:all .15s;text-align:left;width:100%}
+.rstep .dot{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;flex:none;transition:all .2s}
+.rstep.on{color:var(--ink);font-weight:700;background:var(--paper2)}
+.rstep.on .dot{background:var(--flame);border-color:var(--flame);color:#fff}
+.rstep.done .dot{background:var(--teal);border-color:var(--teal);color:#fff}
+.panel h2{font-size:clamp(30px,3.2vw,42px);font-weight:560;letter-spacing:-.015em;margin:6px 0 8px}
+.panel .lead{color:var(--ink2);font-size:15.5px;margin-bottom:34px;max-width:520px}
+.ob-actions{display:flex;justify-content:space-between;align-items:center;margin-top:44px;gap:14px}
+.chiprow{display:flex;flex-wrap:wrap;gap:10px}
+.stepcard{display:flex;flex-wrap:wrap;gap:12px}
+.selcard{flex:1 1 150px;max-width:230px;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px 15px;cursor:pointer;transition:all .16s;text-align:left}
+.selcard:hover{transform:translateY(-2px);border-color:var(--ink2)}
+.selcard.on{border-color:var(--ink);background:var(--ink);color:var(--cream)}
+.selcard.on .ic,.selcard.on small{color:var(--gold)}
+.selcard .ic{color:var(--flame);font-size:20px}
+.selcard b{display:block;font-size:15px;margin:8px 0 3px}
+.selcard small{font-size:12.5px;color:var(--mut);line-height:1.4;display:block}
+.selcard.on small{color:var(--creammut)}
+.stepper{display:inline-flex;align-items:center;gap:0;border:1.5px solid var(--line);border-radius:999px;background:var(--card);overflow:hidden}
+.stepper button{width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink2)}
+.stepper button:hover{background:var(--paper2);color:var(--ink)}
+.stepper b{min-width:56px;text-align:center;font-size:17px}
+.rangeval{font-family:var(--fd);font-size:22px;font-weight:600}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;background:var(--line);padding:0;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--flame);border:3px solid var(--card);box-shadow:var(--sh2);cursor:grab}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.bigAmt{font-family:var(--fd);font-size:40px;font-weight:600;display:flex;align-items:baseline;gap:12px}
+.bigAmt input{font-family:var(--fd);font-size:40px;font-weight:600;border:none;border-bottom:2px solid var(--line);border-radius:0;background:transparent;padding:0 4px;width:250px}
+.bigAmt input:focus{border-color:var(--flame)}
+.bubble{max-width:86%;padding:13px 17px;border-radius:18px;font-size:14.5px;line-height:1.5;animation:fadeUp .3s}
+.bubble.agent{background:var(--paper2);border-bottom-left-radius:5px}
+.bubble.user{background:var(--ink);color:var(--cream);margin-left:auto;border-bottom-right-radius:5px}
+.qreplies{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0 4px}
+.qr{border:1.5px solid var(--flame);color:var(--flame);border-radius:999px;padding:7px 15px;font-size:13.5px;font-weight:600;transition:all .15s}
+.qr:hover{background:var(--flame);color:#fff}
+.typing{display:inline-flex;gap:4px;padding:14px 17px;background:var(--paper2);border-radius:18px;border-bottom-left-radius:5px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--ink2);animation:tp 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tp{0%,100%{opacity:.25;transform:none}50%{opacity:1;transform:translateY(-4px)}}
+.sumwrap{background:var(--card);border:1.5px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--sh)}
+.sumtop{position:relative;height:210px}
+.sumtop .ov{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(14,27,35,.55))}
+.sumtop .route{position:absolute;bottom:22px;left:30px;right:30px;color:#fff;display:flex;align-items:center;gap:16px}
+.sumtop .route b{font-family:var(--fd);font-size:clamp(24px,3.4vw,40px);font-weight:600;letter-spacing:.01em;text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.sumtop .route .ln{flex:1;height:2px;background:repeating-linear-gradient(90deg,#fff 0 7px,transparent 7px 14px);opacity:.85;min-width:40px}
+.sumbody{padding:28px 30px 30px}
+.sumgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 26px;margin:20px 0 8px}
+.sumgrid .k{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--mut);margin-bottom:4px}
+.sumgrid .v{font-size:16.5px;font-weight:600}
+.dotline{display:flex;flex-wrap:wrap;gap:6px 0;align-items:center;font-size:14.5px;font-weight:600}
+.dotline i{font-style:normal;color:var(--flame);padding:0 9px}
+
+/* ============ RESEARCH ============ */
+.research{min-height:100vh;background:var(--dark);color:var(--cream);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 24px;position:relative;overflow:hidden}
+.research .overline{color:var(--gold)}
+.research h2{font-size:clamp(28px,3.4vw,44px);font-weight:560;margin:10px 0 8px;text-align:center}
+.research .rsub{color:var(--creammut);font-size:15px;margin-bottom:34px;text-align:center}
+.routewrap{width:min(680px,92vw);margin-bottom:34px}
+.rsteps{width:min(680px,92vw)}
+.rstep{display:flex;gap:16px;padding:13px 0;align-items:flex-start;opacity:.32;transition:opacity .4s}
+.rstep.active,.rstep.done{opacity:1}
+.rmark{width:28px;height:28px;border-radius:50%;border:2px solid rgba(246,238,220,.3);display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;transition:all .3s}
+.rstep.active .rmark{border-color:var(--gold);animation:pulse 1.2s infinite}
+.rstep.done .rmark{background:var(--teal);border-color:var(--teal);color:#fff}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(222,154,46,.4)}50%{box-shadow:0 0 0 8px rgba(222,154,46,0)}}
+.rstep h4{font-size:16.5px;font-weight:600}
+.rsub2{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.rsub2 span{font-size:13px;color:var(--creammut);display:flex;gap:8px;align-items:center;animation:fadeUp .3s}
+.rsub2 .ic{color:var(--gold);font-size:12px}
+.rnote{margin-top:30px;font-size:12.5px;color:var(--creammut);border:1px solid rgba(246,238,220,.2);border-radius:12px;padding:10px 16px;display:flex;gap:10px;align-items:center;max-width:680px}
+.rnote .ic{color:var(--gold)}
+
+/* ============ RESULTS ============ */
+.rnav{position:sticky;top:0;z-index:900;background:rgba(14,27,35,.94);backdrop-filter:blur(10px);color:var(--cream)}
+.rnav .wrap{display:flex;align-items:center;gap:22px;height:60px}
+.rnav .logo{font-size:19px;color:var(--cream)}
+.rtrip{font-size:13px;font-weight:600;color:var(--creammut);display:flex;align-items:center;gap:8px}
+.rtabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.rtabs::-webkit-scrollbar{display:none}
+.rtabs button{padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:600;color:var(--creammut);white-space:nowrap}
+.rtabs button.on{background:var(--cream);color:var(--ink)}
+.modeswitch{display:flex;gap:3px;background:rgba(246,238,220,.1);padding:3px;border-radius:999px}
+.modeswitch button{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;font-size:12.5px;font-weight:700;color:var(--creammut);transition:all .15s}
+.modeswitch button.on{background:var(--flame);color:#fff}
+.rhero{position:relative;background:var(--dark);color:var(--cream);overflow:hidden}
+.rhero .scene{position:absolute;inset:0;opacity:.9}
+.rhero .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,27,35,.35) 0%,rgba(14,27,35,.78) 78%,var(--dark) 100%)}
+.rhero .wrap{position:relative;z-index:2;padding-top:110px;padding-bottom:60px}
+.rhero h1{font-size:clamp(40px,6vw,84px);font-weight:560;letter-spacing:-.02em;line-height:.98}
+.rhero h1 em{font-style:italic;color:var(--flame)}
+.rhero .dates{font-family:var(--fd);font-style:italic;font-size:clamp(18px,2vw,26px);color:var(--gold);margin:16px 0 8px}
+.rhero .metas{color:var(--creammut);font-size:15px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meterbox{margin-top:36px;background:rgba(246,238,220,.07);border:1px solid rgba(246,238,220,.16);border-radius:22px;padding:24px 28px;backdrop-filter:blur(6px);max-width:660px}
+.meter-top{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
+.meter-top .big{font-family:var(--fd);font-size:38px;font-weight:600}
+.status{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:13.5px;border-radius:999px;padding:6px 14px}
+.status.ok{background:rgba(95,191,143,.16);color:#7FD8A8;border:1px solid rgba(95,191,143,.4)}
+.status.over{background:rgba(228,87,46,.15);color:#FF9B7E;border:1px solid rgba(228,87,46,.4)}
+.meterbar{height:10px;border-radius:99px;background:rgba(246,238,220,.15);margin:16px 0 10px;overflow:hidden}
+.meterbar i{display:block;height:100%;border-radius:99px;background:var(--flame);transition:width .8s cubic-bezier(.3,.8,.3,1)}
+.meter-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--creammut)}
+.keypicks{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+.kpick{background:rgba(246,238,220,.08);border:1px solid rgba(246,238,220,.16);border-radius:16px;padding:14px 18px;display:flex;gap:13px;align-items:center;cursor:pointer;transition:background .15s;min-width:230px;flex:1}
+.kpick:hover{background:rgba(246,238,220,.14)}
+.kpick .ic{color:var(--gold);font-size:20px}
+.kpick .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--creammut);font-weight:700}
+.kpick .v{font-weight:600;font-size:14.5px}
+.sect-r{padding:78px 0}
+.sect-r.alt{background:var(--paper2)}
+.shead{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:38px;flex-wrap:wrap}
+.shead h2{font-size:clamp(28px,3vw,42px);font-weight:560;letter-spacing:-.015em;margin-top:10px}
+.shead .r{font-size:13px;color:var(--mut);max-width:340px;text-align:right}
+.tcard{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:22px 26px;margin-bottom:14px;transition:border .2s,box-shadow .2s;position:relative}
+.tcard:hover{box-shadow:var(--sh2)}
+.tcard.picked{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,107,.14)}
+.tcard .toprow{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.tcard h3{font-size:20px;font-weight:600;display:flex;align-items:center;gap:11px}
+.tcard h3 .ic{color:var(--flame)}
+.routeviz{display:flex;align-items:center;gap:14px;margin:16px 0;padding:14px 18px;background:var(--paper);border-radius:14px}
+.routeviz .pt b{font-family:var(--fd);font-size:22px;display:block}
+.routeviz .pt span{font-size:12px;color:var(--mut)}
+.routeviz .mid{flex:1;text-align:center;font-size:12.5px;color:var(--ink2);font-weight:600}
+.routeviz .mid .bar{height:2px;background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 12px);margin:7px 30px;opacity:.5}
+.tmeta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:var(--mut)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.filters .chip{padding:7px 15px;font-size:13px}
+.hrow{display:flex;gap:0;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 22px;scrollbar-width:thin}
+.hcard{flex:0 0 min(460px,86vw);scroll-snap-align:start;background:var(--card);border:1.5px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:all .2s;margin-right:18px}
+.hcard.picked{border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,124,107,.15)}
+.hcard .art{height:200px;position:relative;overflow:hidden}
+.hcard:hover .art svg{transform:scale(1.05)}
+.hcard .art svg{transition:transform .6s}
+.hcard .badge{position:absolute;top:14px;left:14px;background:rgba(255,253,246,.92);border-radius:999px;font-size:12px;font-weight:700;padding:5px 12px;display:flex;gap:6px;align-items:center}
+.hcard .badge .ic{color:var(--gold)}
+.hcard .body{padding:20px 22px 22px;display:flex;flex-direction:column;flex:1}
+.hcard h3{font-size:21px;font-weight:600}
+.hcard .loc{color:var(--mut);font-size:13.5px;margin:3px 0 10px}
+.rate{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.rate .ic{color:var(--gold)}
+.rate small{color:var(--mut);font-weight:500}
+.amen{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.amen span{font-size:12px;font-weight:600;color:var(--ink2);background:var(--paper2);border-radius:7px;padding:4px 10px;display:inline-flex;gap:6px;align-items:center}
+.amen .ic{color:var(--teal);font-size:11.5px}
+.pricerow{display:flex;align-items:baseline;gap:8px;margin-top:auto;padding-top:8px}
+.pricerow .p{font-family:var(--fd);font-size:26px;font-weight:600}
+.pricerow .per{font-size:13px;color:var(--mut)}
+.hbtns{display:flex;gap:9px;margin-top:14px}
+.hbtns .btn{flex:1;justify-content:center;padding:10px 8px;font-size:13.5px}
+.rcols{columns:2;column-gap:20px}
+.rcard{break-inside:avoid;background:var(--card);border:1.5px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:20px;transition:transform .2s,box-shadow .2s}
+.rcard:hover{transform:translateY(-4px);box-shadow:var(--sh2)}
+.rcard .art{height:130px;overflow:hidden}
+.rcard .body{padding:18px 20px 20px}
+.dietb{font-size:11px;font-weight:700;letter-spacing:.06em;border-radius:6px;padding:3px 8px;text-transform:uppercase}
+.dietb.veg{background:#E2F2E4;color:#1D6E3E}.dietb.vegan{background:#E1F0E4;color:#2A6E4A}.dietb.jain{background:#FBF0D8;color:#8a5f10}.dietb.nonveg{background:#F7E3DC;color:#A8442B}.dietb.any{background:#E8EDF0;color:#3D5560}
+.actrow{display:flex;gap:18px;overflow-x:auto;padding:6px 4px 22px;scroll-snap-type:x mandatory}
+.acard{flex:0 0 268px;scroll-snap-align:start;background:var(--card);border:1.5px solid var(--line);border-radius:20px;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.acard:hover{transform:translateY(-5px);box-shadow:var(--sh2)}
+.acard .art{height:140px;overflow:hidden;position:relative}
+.acard:hover .art svg{transform:scale(1.06)}
+.acard .art svg{transition:transform .6s}
+.acard .body{padding:16px 18px 18px}
+.daynav{display:flex;gap:10px;overflow-x:auto;padding-bottom:20px;scrollbar-width:none}
+.daynav::-webkit-scrollbar{display:none}
+.daypill{flex:none;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:12px 18px;text-align:left;transition:all .16s;min-width:150px}
+.daypill.on{background:var(--ink);border-color:var(--ink);color:var(--cream)}
+.daypill b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--flame);display:block}
+.daypill.on b{color:var(--gold)}
+.daypill span{font-size:13.5px;font-weight:600;display:block;margin-top:2px}
+.daypill small{font-size:11.5px;color:var(--mut);display:block}
+.daypill.on small{color:var(--creammut)}
+.daytitle{display:flex;align-items:baseline;gap:16px;margin:6px 0 26px;flex-wrap:wrap}
+.daytitle h3{font-size:clamp(24px,2.6vw,34px);font-weight:600;font-style:italic}
+.daytitle .dstats{color:var(--mut);font-size:13.5px}
+.tl{position:relative;padding-left:30px}
+.tl::before{content:'';position:absolute;left:9px;top:14px;bottom:14px;border-left:2px dashed var(--line)}
+.blk{position:relative;margin-bottom:10px;background:var(--card);border:1.5px solid var(--line);border-radius:18px;transition:border .2s}
+.blk:hover{border-color:var(--ink2)}
+.blk::before{content:'';position:absolute;left:-27px;top:26px;width:12px;height:12px;border-radius:50%;background:var(--flame);border:3px solid var(--paper)}
+.blk::after{content:'';position:absolute;left:-27px;top:38px;width:12px;height:12px;border-radius:50%;background:var(--paper)}
+.blkhead{display:flex;gap:18px;padding:16px 20px;align-items:flex-start;cursor:pointer}
+.blktime{font-family:var(--fd);font-weight:600;font-size:17px;color:var(--flame);min-width:58px;padding-top:2px}
+.blkhead .bico{width:38px;height:38px;border-radius:12px;background:var(--paper2);display:flex;align-items:center;justify-content:center;color:var(--ink2);flex:none}
+.blkhead h4{font-size:16.5px;font-weight:600}
+.blkhead .bsub{font-size:13.5px;color:var(--mut);margin-top:2px}
+.blkchips{margin-left:auto;display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.bchip{font-size:12px;font-weight:700;color:var(--ink2);background:var(--paper2);border-radius:7px;padding:3px 9px;white-space:nowrap}
+.bchip.free{color:#1D6E3E;background:#E2F2E4}
+.blkdetail{padding:0 20px 18px 96px;animation:fadeUp .25s}
+.blkdetail p{font-size:14px;color:var(--ink2);margin-bottom:9px}
+.blkdetail .why{font-size:13.5px;color:var(--ink);background:#FBF4E2;border-left:3px solid var(--gold);padding:9px 13px;border-radius:0 10px 10px 0;margin-bottom:10px}
+.blkdetail .why b{color:#8a5f10}
+.gaprow{display:flex;align-items:center;gap:12px;color:var(--mut);font-size:12.5px;padding:4px 0 12px 30px}
+.gaprow .gline{flex:none;width:34px;border-top:2px dotted var(--line)}
+.mapwrap{position:relative;border-radius:24px;overflow:hidden;border:1.5px solid var(--line);box-shadow:var(--sh);height:560px;background:var(--paper2)}
+#mapEl{position:absolute;inset:0;z-index:1}
+.maplegend{position:absolute;top:14px;left:14px;z-index:600;background:rgba(255,253,246,.94);border-radius:14px;padding:12px 16px;font-size:12.5px;font-weight:600;box-shadow:var(--sh2);display:flex;flex-direction:column;gap:6px}
+.maplegend span{display:flex;gap:8px;align-items:center}
+.maplegend i{width:10px;height:10px;border-radius:50%;flex:none}
+.daytoggles{position:absolute;bottom:14px;left:14px;right:14px;z-index:600;display:flex;gap:8px;flex-wrap:wrap}
+.daytoggles button{background:rgba(255,253,246,.94);border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:700;box-shadow:var(--sh2)}
+.daytoggles button.on{background:var(--ink);color:var(--cream)}
+.loccard{position:absolute;top:14px;right:14px;bottom:14px;width:330px;max-width:calc(100% - 28px);z-index:700;background:var(--card);border-radius:20px;box-shadow:var(--sh);overflow:auto;animation:fadeUp .3s}
+.loccard .art{height:150px}
+.loccard .body{padding:18px 20px}
+.pinIco{background:none;border:none}
+.budgetsec{background:var(--dark);color:var(--cream);border-radius:28px;padding:48px 48px 44px}
+.budtop{display:grid;grid-template-columns:1.1fr .9fr;gap:46px;align-items:start}
+.budbig{font-family:var(--fd);font-size:clamp(40px,4.6vw,64px);font-weight:600;line-height:1}
+.budsub{color:var(--creammut);margin-top:10px;font-size:15px}
+.bar{display:flex;height:16px;border-radius:99px;overflow:hidden;margin:26px 0 8px;background:rgba(246,238,220,.1)}
+.bar i{display:block;height:100%;transition:width .7s cubic-bezier(.3,.8,.3,1)}
+.budrow{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid rgba(246,238,220,.12);animation:fadeUp .3s}
+.budrow .ic{color:var(--gold)}
+.budrow .cat{font-weight:600;font-size:14.5px}
+.budrow .note{font-size:12px;color:var(--creammut)}
+.budrow .amt{margin-left:auto;font-family:var(--fd);font-weight:600;font-size:17px}
+.budrow .swatch{width:11px;height:11px;border-radius:4px;flex:none}
+.buffrow{display:flex;align-items:center;gap:14px;padding:16px 0 6px;font-size:13.5px}
+.buffrow input[type=range]{flex:1;background:rgba(246,238,220,.2)}
+.budfoot{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:16px;flex-wrap:wrap}
+.rem{font-size:15px}
+.rem b{font-family:var(--fd);font-size:22px}
+.regbox{margin-top:44px;border-top:1px solid rgba(246,238,220,.14);padding-top:26px}
+.regbox h4{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--creammut);margin-bottom:16px}
+.reggrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.regcol{font-size:13px}
+.regcol b{display:block;color:var(--gold);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.regcol span{display:flex;justify-content:space-between;gap:10px;color:var(--creammut);padding:3px 0;border-bottom:1px dashed rgba(246,238,220,.12)}
+.dots{letter-spacing:2px;color:var(--teal)}
+.ainfo{display:flex;align-items:center;gap:9px;margin-top:18px;font-size:13px;color:var(--ink2);background:var(--paper2);border-radius:12px;padding:11px 15px}
+.ainfo .ic{color:var(--flame)}
+.abtn{position:fixed;bottom:26px;right:26px;z-index:1500;width:62px;height:62px;border-radius:50%;background:var(--flame);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 30px rgba(228,87,46,.4);transition:transform .2s}
+.abtn:hover{transform:scale(1.08) rotate(-6deg)}
+.apanel{position:fixed;bottom:100px;right:26px;z-index:1500;width:390px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 140px);background:var(--card);border-radius:24px;box-shadow:0 24px 60px rgba(20,38,46,.3);display:flex;flex-direction:column;overflow:hidden;animation:fadeUp .3s}
+.apanel .hd{background:var(--ink);color:var(--cream);padding:16px 20px;display:flex;align-items:center;gap:12px}
+.apanel .hd .ava{width:36px;height:36px;border-radius:50%;background:var(--dark2);display:flex;align-items:center;justify-content:center;color:var(--gold);flex:none}
+.apanel .hd b{font-size:15px;display:block}
+.apanel .hd small{color:var(--creammut);font-size:11.5px}
+.abody{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.asugg{display:flex;gap:7px;flex-wrap:wrap;padding:0 18px 12px}
+.asugg button{font-size:12px;font-weight:600;border:1.5px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--ink2)}
+.asugg button:hover{border-color:var(--flame);color:var(--flame)}
+.ainput{display:flex;gap:9px;padding:13px 15px;border-top:1.5px solid var(--line)}
+.ainput input{border-radius:999px}
+.ainput button{width:44px;height:44px;border-radius:50%;background:var(--flame);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.applied{display:inline-flex;gap:7px;align-items:center;font-size:12px;font-weight:700;color:#1D6E3E;background:#E2F2E4;border-radius:999px;padding:4px 12px;margin-top:7px}
+.cmpbar{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:1400;background:var(--ink);color:var(--cream);border-radius:999px;padding:11px 22px;display:flex;gap:16px;align-items:center;box-shadow:var(--sh)}
+.cmptbl{width:100%;border-collapse:collapse;font-size:14px}
+.cmptbl th,.cmptbl td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmptbl th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.cmptbl td b{font-family:var(--fd)}
+.demostrip{background:#FBF0D8;border-bottom:1.5px solid #EAD08F;color:#6d4a0c;font-size:13px;font-weight:600;padding:9px 20px;display:flex;gap:10px;align-items:center;justify-content:center;text-align:center}
+.demostrip .ic{color:#8a5f10}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width:1020px){
+  .hero-grid{grid-template-columns:1fr}
+  .hero-art{min-height:340px;order:-1}
+  .hero-art::after{background:linear-gradient(180deg,transparent 55%,var(--dark))}
+  .hero-copy{padding:44px 0 60px}
+  .ob-grid{grid-template-columns:1fr;gap:30px;padding-top:26px}
+  .rail{position:static}
+  .railsteps{flex-direction:row;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+  .railsteps::-webkit-scrollbar{display:none}
+  .rstep span{white-space:nowrap}
+  .howrow{grid-template-columns:1fr;gap:30px}
+  .howstep:nth-child(2),.howstep:nth-child(3){transform:none}
+  .howpath{display:none}
+  .budtop{grid-template-columns:1fr}
+  .realdemo{grid-template-columns:1fr;padding:32px}
+  .sumgrid{grid-template-columns:1fr 1fr}
+  .rcols{columns:1}
+  .blkdetail{padding-left:20px}
+  .blkchips{margin-left:0;justify-content:flex-start;width:100%}
+}
+@media (max-width:680px){
+  .wrap{padding:0 18px}
+  .nav .nl{display:none}
+  .rnav .wrap{gap:10px}
+  .rtrip{display:none}
+  .modeswitch button span{display:none}
+  .sect{padding:64px 0}
+  .mapwrap{height:440px}
+  .maplegend{display:none}
+  .budgetsec{padding:30px 22px}
+  .apanel{right:16px;left:16px;width:auto}
+  .two{grid-template-columns:1fr}
+  .sumtop .route{left:18px;right:18px}
+  .sumbody{padding:22px 20px}
+  .meterbox{padding:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div class="toastwrap" id="toasts"></div>
+<div id="modalHost"></div>
+<div id="assistHost"></div>
+
+<script>
+/* =========================================================
+   VOYARA — Phase 1 (frontend experience, simulated research)
+   All prices/availability/reviews below are DEMO data.
+   ========================================================= */
+
+/* ---------- utilities ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function rng(seed){let h=1779033703^String(seed).length;for(let i=0;i<String(seed).length;i++){h=Math.imul(h^String(seed).charCodeAt(i),3432918353);h=h<<13|h>>>19}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
+function hex2rgb(h){h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]}
+function mixHex(a,b,t){const A=hex2rgb(a),B=hex2rgb(b);return '#'+[0,1,2].map(i=>Math.round(lerp(A[i],B[i],t)).toString(16).padStart(2,'0')).join('')}
+function setPath(o,p,v){const k=p.split('.');let t=o;for(let i=0;i<k.length-1;i++)t=t[k[i]];t[k[k.length-1]]=v}
+function haversine(a,b,c,d){const R=6371,r=x=>x*Math.PI/180,dl=r(c-a),dg=r(d-b);const h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+function addMin(hhmm,n){let[h,m]=hhmm.split(':').map(Number);m+=n;h+=Math.floor(m/60);m%=h?m%60:m;h=((h%24)+24)%24;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')}
+function fmtD(iso,long){const d=new Date(iso+'T12:00:00');return long?d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}):d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+function nowStamp(){const d=new Date();return d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})+' · '+d.toLocaleDateString('en-GB',{day:'numeric',month:'long'})}
+function countUp(el,to,fmt){const from=Number(el.dataset.v||0);el.dataset.v=to;const t0=performance.now(),dur=750;
+  (function f(t){const p=clamp((t-t0)/dur,0,1),e=1-Math.pow(1-p,3);el.textContent=fmt(from+(to-from)*e);if(p<1)requestAnimationFrame(f)})(t0)}
+function toast(msg,ic='check'){const t=document.createElement('div');t.className='toast';t.innerHTML=`<span class="ic">${ic2(ic)}</span>${esc(msg)}`;$('#toasts').appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(()=>t.remove(),400)},3200)}
+function openModal(html){$('#modalHost').innerHTML=`<div class="modal" onclick="if(event.target===this)A.mclose()"><div class="mbox"><button class="mclose" onclick="A.mclose()" aria-label="Close">${ic2('x')}</button>${html}</div></div>`}
+
+/* ---------- icons (inline SVG, no emoji) ---------- */
+const IC={
+compass:'<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z" fill="currentColor" stroke="none"/>',
+spark:'<path d="M12 3l1.9 5.3L19 10l-5.1 1.7L12 17l-1.9-5.3L5 10l5.1-1.7z" fill="currentColor" stroke="none"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor" stroke="none"/>',
+plane:'<path d="M21 15.5v-2l-8-4.7V3.6a1.5 1.5 0 0 0-3 0v5.2l-8 4.7v2l8-2.3v4.6L8 19.4V21l4-1 4 1v-1.6l-2-1.6v-4.6z" fill="currentColor" stroke="none"/>',
+train:'<rect x="5" y="3" width="14" height="12.5" rx="3"/><path d="M5 9.5h14M8.5 21l1.6-3.5M15.5 21l-1.6-3.5M6 21h12"/><circle cx="9" cy="13" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r=".9" fill="currentColor" stroke="none"/>',
+bus:'<rect x="4" y="3" width="16" height="14" rx="3"/><path d="M4 10h16M4 21v-4M20 21v-4M7.5 21h9"/><rect x="7" y="5.5" width="4" height="3" rx="1"/><rect x="13" y="5.5" width="4" height="3" rx="1"/>',
+car:'<path d="M4 16 5.6 11A2 2 0 0 1 7.5 9.6h9a2 2 0 0 1 1.9 1.4L20 16M3 16h18v3.2h-2.6M3 16v3.2h2.6M7 12.4h10"/><circle cx="7.4" cy="19.2" r="1.7"/><circle cx="16.6" cy="19.2" r="1.7"/>',
+taxi:'<path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6M4 16l1.5-4.5A2 2 0 0 1 7.4 10h9.2a2 2 0 0 1 1.9 1.5L20 16M3 16h18v3.2h-2.6M3 16v3.2h2.6"/><circle cx="7.4" cy="19.2" r="1.7"/><circle cx="16.6" cy="19.2" r="1.7"/>',
+bed:'<path d="M3 6v13M3 12h12.5A4.5 4.5 0 0 1 20 16.5V19M3 19h18M7 9a1.6 1.6 0 1 0 .01 0M7 12h4"/>',
+utensils:'<path d="M5 3v6a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V3M7 3v18M16.5 3c-1.8 1-3 3.2-3 6v3h3v9M16.5 3v9"/>',
+leaf:'<path d="M6 20C4 14 7 6 15 4c3.5-.8 5.5.8 5.5.8S20 12 16 16c-3 3-7 4.5-10 4z"/><path d="M5 21c3.5-5.5 8-9 13-11.5"/>',
+mountain:'<path d="m3 19 6-12 3.5 6.5L15 10l6 9z"/><circle cx="18" cy="5.5" r="2"/>',
+tent:'<path d="M12 4 2.5 20h19zM12 4l4 16M9.3 20 12 14.5l2.7 5.5"/>',
+waves:'<path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+landmark:'<path d="M3 21h18M4.5 21V10M9.5 21V10M14.5 21V10M19.5 21V10M3 7l9-4.5L21 7z"/>',
+bank:'<path d="M4 10v8M9.3 10v8M14.6 10v8M20 10v8M2.5 18.5h19M3.5 10h17L12 3z"/>',
+palette:'<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2.3-.9 2.3-2 0-1.4-1.2-1.7-1.2-2.8 0-1 .8-1.7 2-1.7H17a4.5 4.5 0 0 0 4.5-4.5C21.5 6 17.2 3 12 3z"/><circle cx="7.5" cy="10.5" r=".9" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r=".9" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10" r=".9" fill="currentColor" stroke="none"/>',
+bag:'<path d="M6.5 8h11L19 21H5zM9 8V6.5a3 3 0 0 1 6 0V8"/>',
+camera:'<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7 10 4.5h4L15.5 7"/><circle cx="12" cy="13.3" r="3.4"/>',
+music:'<path d="M9 18.5V5.5l11-2v13"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="16.5" r="2.5"/>',
+lotus:'<path d="M12 20c-4.2 0-7.4-2.4-8.4-6 2.6 0 4.7.6 6.2 1.9-1-3.6-.4-7.2 2.2-10.4 2.6 3.2 3.2 6.8 2.2 10.4 1.5-1.3 3.6-1.9 6.2-1.9-1 3.6-4.2 6-8.4 6z"/>',
+ticket:'<path d="M3 9a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 7v2m0 3v2m0 3v2" stroke-dasharray="2 2.6"/>',
+paw:'<circle cx="7" cy="8.5" r="1.9"/><circle cx="12" cy="6.8" r="1.9"/><circle cx="17" cy="8.5" r="1.9"/><path d="M12 11.5c-2.8 0-5.5 2.2-5.5 4.9 0 1.5 1.1 2.6 2.7 2.6 1.1 0 1.9-.5 2.8-.5s1.7.5 2.8.5c1.6 0 2.7-1.1 2.7-2.6 0-2.7-2.7-4.9-5.5-4.9z"/>',
+star:'<path d="m12 2.8 2.8 5.8 6.4.9-4.6 4.4 1.1 6.3L12 17.2l-5.7 3 1.1-6.3L2.8 9.5l6.4-.9z" fill="currentColor" stroke="none"/>',
+check:'<path d="m4.5 12.5 5 5 10-11"/>',
+x:'<path d="M5 5l14 14M19 5 5 19"/>',
+plus:'<path d="M12 4.5v15M4.5 12h15"/>',
+minus:'<path d="M4.5 12h15"/>',
+arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',
+back:'<path d="M20 12H4m6 6-6-6 6-6"/>',
+clock:'<circle cx="12" cy="12" r="9"/><path d="M12 6.5V12l3.5 2.5"/>',
+pin:'<path d="M12 21.5S5 15 5 9.8a7 7 0 0 1 14 0c0 5.2-7 11.7-7 11.7z"/><circle cx="12" cy="9.8" r="2.6"/>',
+route:'<circle cx="6" cy="18" r="2.6"/><circle cx="18" cy="6" r="2.6"/><path d="M8.6 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.4" stroke-dasharray="3.2 3.2"/>',
+wallet:'<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16.5 15h.01"/>',
+users:'<circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.4 3.1-5.4 6.2-5.4s5.6 2 6.2 5.4M16 4.8a3.4 3.4 0 0 1 0 6.4M18 14.9c1.9.7 3 2.2 3.4 4.3"/>',
+calendar:'<rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+wifi:'<path d="M4 9.5a12 12 0 0 1 16 0M7 13a8 8 0 0 1 10 0M10 16.4a3.6 3.6 0 0 1 4 0"/><circle cx="12" cy="19.5" r="1.2" fill="currentColor" stroke="none"/>',
+parking:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M9.5 16.5V8h3.7a2.9 2.9 0 0 1 0 5.8H9.5"/>',
+coffee:'<path d="M4 8.5h12.5v4.8a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16.5 9.5h1.6a2.6 2.6 0 0 1 0 5.2h-1.9M7.5 3.5c-1 1.2 1 1.8 0 3M11.5 3.5c-1 1.2 1 1.8 0 3"/>',
+moon:'<path d="M20 14.5A8.2 8.2 0 1 1 9.5 4 6.6 6.6 0 0 0 20 14.5z"/>',
+sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/>',
+info:'<circle cx="12" cy="12" r="9"/><path d="M12 10.8V17M12 7.2v.01"/>',
+shield:'<path d="M12 3 5 5.8v5.4c0 4.8 3.3 7.8 7 9.8 3.7-2 7-5 7-9.8V5.8z"/>',
+heart:'<path d="M12 20.5S3.5 15 3.5 8.9A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.5 2.5C20.5 15 12 20.5 12 20.5z"/>',
+gem:'<path d="M7 3h10l4.5 6L12 21 2.5 9zM2.5 9h19M12 21 8.2 9 12 3l3.8 6z"/>',
+scale:'<path d="M12 3.5V21M6.5 21h11M4 7.5h16M4 7.5 1.8 13a2.9 2.9 0 0 0 4.4 0zM20 7.5l-2.2 5.5a2.9 2.9 0 0 0 4.4 0z" transform="translate(0 -1)"/>',
+tree:'<path d="M12 2.5 7 9h2.5L6 14.5h4V21h4v-6.5h4L14.5 9H17z"/>',
+bot:'<rect x="4.5" y="8" width="15" height="11" rx="3.5"/><path d="M12 8V4.5M12 4.5h3M9 12.5v1.5M15 12.5v1.5M9.5 16.5h5"/>',
+filter:'<path d="M4 6h16M7 12h10M10 18h4"/>',
+maximize:'<path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/>',
+};
+const ic2=(n,cls='')=>`<svg class="ic ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||IC.pin}</svg>`;
+
+/* ---------- poster scene engine (image fallback system) ---------- */
+const PALS={
+alpine:{sky:'#DDEDE6',sun:'#F2A03D',far:'#A8C8BC',mid:'#5E8F82',near:'#3A635B',fg:'#20423C',ac:'#E4572E',hi:'#FDF7EA'},
+ember:{sky:'#FBE0C0',sun:'#E4572E',far:'#E0A878',mid:'#A96A4E',near:'#6E4638',fg:'#3A2620',ac:'#2F6D62',hi:'#FFF3E0'},
+coast:{sky:'#D7EEEA',sun:'#F2A03D',far:'#8FC7C0',mid:'#2F8C96',near:'#1B6168',fg:'#123F44',ac:'#E4572E',hi:'#FFF6E8'},
+heritage:{sky:'#F6E3C2',sun:'#E4572E',far:'#DFB98A',mid:'#B0764C',near:'#7C4E33',fg:'#402A1E',ac:'#1F6E64',hi:'#FFF6E6'},
+dusk:{sky:'#26334E',sun:'#F5D9A8',far:'#3A4A6B',mid:'#2A3752',near:'#1B2438',fg:'#101728',ac:'#E4572E',hi:'#F8E9C8'},
+meadow:{sky:'#E7F0D6',sun:'#F2A03D',far:'#BCD4A0',mid:'#7BA86E',near:'#4E7D51',fg:'#2C4A34',ac:'#D96B3B',hi:'#FDF8EC'},
+sand:{sky:'#FBEAD0',sun:'#E4572E',far:'#F0C98F',mid:'#D89A62',near:'#A96A45',fg:'#5A3A28',ac:'#1F6E64',hi:'#FFF7E9'}
+};
+function S_el(r,inner){return `<g data-r="${r}">${inner}</g>`}
+function ridge(r,w,h,y0,amp,color){let pts=`0,${h}`;const ph=r()*3;for(let i=1;i<=6;i++){const x=w*i/6;const y=y0-Math.abs(Math.sin(i*1.55+ph))*amp-r()*amp*.3;pts+=` ${x.toFixed(0)},${Math.max(30,y).toFixed(0)}`}pts+=` ${w},${h}`;return `<polygon points="${pts}" fill="${color}"/>`}
+function pines(r,w,h,y,color,n=7){let s='';for(let i=0;i<n;i++){const x=20+r()*(w-40),yy=y+r()*16,sz=14+r()*14;
+s+=`<path d="M${x.toFixed(0)} ${(yy-sz*1.7).toFixed(0)} l${(sz*.42).toFixed(0)} ${sz} h-${sz*.84} z" fill="${color}"/><path d="M${x.toFixed(0)} ${(yy-sz*1.15).toFixed(0)} l${(sz*.55).toFixed(0)} ${sz} h-${sz*1.1} z" fill="${color}"/><rect x="${(x-1.4).toFixed(0)}" y="${yy.toFixed(0)}" width="2.8" height="${(sz*.4).toFixed(0)}" fill="${color}"/>`}return s}
+function clouds(r,w,hi,n=2){let s='';for(let i=0;i<n;i++){const x=r()*w,y=30+r()*70,sc=.7+r()*.7;
+s+=`<g class="drift ${i%2?'d2':''}" opacity=".8" style="animation-delay:-${(r()*20).toFixed(0)}s"><g fill="${hi}" transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) scale(${sc.toFixed(2)})"><ellipse rx="30" ry="10"/><ellipse cx="20" cy="-6" rx="18" ry="9"/><ellipse cx="-16" cy="-3" rx="14" ry="7"/></g></g>`}return s}
+function birds(r,w,h,color,n=2){let s='';for(let i=0;i<n;i++){const x=40+r()*(w-80),y=40+r()*60;s+=`<g class="gull" style="animation-delay:-${(r()*3).toFixed(1)}s"><path d="M${x.toFixed(0)} ${y.toFixed(0)} q 5 -6 10 0 q 5 -6 10 0" stroke="${color}" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`}return s}
+function balloon(r,x,y,sc,c1,c2){return `<g class="bob" transform="translate(${x} ${y}) scale(${sc})" style="animation-delay:-${(r()*4).toFixed(1)}s"><path d="M0,-26 a17,21 0 1 1 -.1,0 z" fill="${c1}"/><path d="M-13,-8 C-9,4 9,4 13,-8 L4,6 h-8 z" fill="${c2}"/><rect x="-4.5" y="10" width="9" height="7" rx="1.5" fill="${c2}"/><path d="M-6 5 -4 10 M6 5 4 10" stroke="${c2}" stroke-width="1.2"/></g>`}
+const SCENE={
+mountain(r,w,h,p){return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.sky}"/>`)+S_el('sun',`<circle cx="${w*.74}" cy="${h*.3}" r="${h*.11}" fill="${p.sun}"/>`)+S_el('hi',clouds(r,w,p.hi,2))+S_el('far',ridge(r,w,h,h*.52,h*.16,p.far))+S_el('mid',ridge(r,w,h,h*.62,h*.18,p.mid))+S_el('ac',birds(r,w,h,p.fg,2))+S_el('near',ridge(r,w,h,h*.74,h*.15,p.near)+pines(r,w,h,h*.8,p.fg,6))},
+coast(r,w,h,p){let wv='';for(let i=0;i<3;i++){const y=h*(.62+i*.1);let d=`M0 ${y}`;for(let x=0;x<w;x+=40)d+=` q 10 -5 20 0 t 20 0`;wv+=`<path d="${d}" stroke="${p.hi}" stroke-width="2" fill="none" opacity="${.5-i*.12}" stroke-linecap="round"/>`}
+return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.sky}"/>`)+S_el('sun',`<circle cx="${w*.24}" cy="${h*.28}" r="${h*.1}" fill="${p.sun}"/>`)+S_el('hi',clouds(r,w,p.hi,1))+S_el('mid',`<rect y="${h*.55}" width="${w}" height="${h*.45}" fill="${p.mid}"/>`+wv)+S_el('near',`<polygon points="${w},${h} ${w},${h*.42} ${w*.72},${h*.5} ${w*.6},${h} " fill="${p.near}"/>`)+S_el('ac',`<g transform="translate(${w*.3} ${h*.66})"><path d="M-15 0 h30 l-5 8 h-20 z" fill="${p.fg}"/><path d="M2 -3 V-26 L17 -3 Z" fill="${p.hi}"/><path d="M-2 -22 V-3 L-12 -3 Z" fill="${p.ac}"/></g>`)+S_el('fg',birds(r,w,h,p.fg,2))},
+heritage(r,w,h,p){const cx=w/2,by=h*.72;const ar=(x,ww)=>`<path d="M${x} ${by} v-${ww*1.1} a${ww/2} ${ww/2} 0 0 1 ${ww} 0 V${by} z" fill="${p.hi}"/>`;
+return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.sky}"/>`)+S_el('sun',`<circle cx="${cx}" cy="${h*.3}" r="${h*.12}" fill="${p.sun}"/>`)+S_el('far',`<rect y="${h*.8}" width="${w}" height="${h*.2}" fill="${p.far}"/>`)+S_el('mid',`<rect x="${cx-w*.2}" y="${by-h*.24}" width="${w*.4}" height="${h*.34}" fill="${p.mid}"/><rect x="${cx-w*.3}" y="${by-h*.1}" width="${w*.6}" height="${h*.2}" fill="${p.mid}"/>`)+S_el('near',`<rect x="${cx-w*.24}" y="${by-h*.06}" width="${w*.48}" height="${h*.18}" fill="${p.near}"/><path d="M${cx-34} ${by-h*.24} a34 27 0 0 1 68 0 z" fill="${p.near}"/><rect x="${cx-3}" y="${by-h*.24-42}" width="6" height="18" fill="${p.near}"/><circle cx="${cx}" cy="${by-h*.24-45}" r="4" fill="${p.sun}"/><rect x="${cx-w*.33}" y="${by-h*.16}" width="10" height="${h*.26}" fill="${p.near}"/><rect x="${cx+w*.33-10}" y="${by-h*.16}" width="10" height="${h*.26}" fill="${p.near}"/>`)+S_el('hi',ar(cx-w*.09,22)+ar(cx+w*.09-22,22)+ar(cx-11,22)+birds(r,w,h,p.fg,2))},
+city(r,w,h,p){const night=p===PALS.dusk;let bl='';const n=9;for(let i=0;i<n;i++){const bw=w/n,bh=h*(.24+r()*.34),x=i*bw,y=h*.82-bh;bl+=`<rect x="${x}" y="${y.toFixed(0)}" width="${bw-3}" height="${(bh+h*.18).toFixed(0)}" fill="${i%2?p.mid:p.near}"/>`;
+for(let wx=x+6;wx<x+bw-9;wx+=11){for(let wy=y+8;wy<h*.8;wy+=15){if(r()<(night?.6:.18))bl+=`<rect x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="4" height="6" fill="${night?p.sun:p.hi}" opacity="${.5+r()*.5}"/>`}}}
+return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.sky}"/>`)+S_el('sun',night?`<circle cx="${w*.78}" cy="${h*.2}" r="${h*.07}" fill="${p.sun}"/>`:`<circle cx="${w*.78}" cy="${h*.22}" r="${h*.1}" fill="${p.sun}"/>`)+S_el('hi',night?[...Array(14)].map(()=>`<circle cx="${(r()*w).toFixed(0)}" cy="${(r()*h*.4).toFixed(0)}" r="1.3" fill="${p.hi}"/>`).join(''):clouds(r,w,p.hi,1))+S_el('mid',bl)+S_el('near',`<rect x="${w*.44}" y="${h*.82-h*.5}" width="14" height="${h*.5}" fill="${p.fg}"/><polygon points="${w*.44},${h*.32-h*.06} ${w*.44+7},${h*.2} ${w*.44+14},${h*.32-h*.06}" fill="${p.fg}"/><rect y="${h*.82}" width="${w}" height="${h*.18}" fill="${p.fg}"/>`)+S_el('ac',`<path d="M0 ${h*.87} q 15 -4 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0 t 30 0" stroke="${p.ac}" stroke-width="2" fill="none" opacity=".55"/>`)},
+food(r,w,h,p){const cx=w/2,cy=h*.52;
+return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.hi}"/>`)+S_el('far',`<rect x="${w*.06}" y="${h*.78}" width="${w*.34}" height="${h*.1}" rx="6" fill="${p.far}"/>`)+S_el('mid',`<circle cx="${cx}" cy="${cy}" r="${h*.34}" fill="#FFFCF2"/><circle cx="${cx}" cy="${cy}" r="${h*.26}" fill="none" stroke="${p.far}" stroke-width="2"/>`)+S_el('near',`<path d="M${cx-52} ${cy+8} q 20 -34 55 -22 q 30 10 42 -6 q 8 26 -22 36 q -48 14 -75 -8z" fill="${p.ac}"/><ellipse cx="${cx-30}" cy="${cy-12}" rx="20" ry="10" fill="${p.sun}" opacity=".85"/><circle cx="${cx+34}" cy="${cy+14}" r="4" fill="${p.near}"/><circle cx="${cx+44}" cy="${cy+4}" r="3" fill="${p.near}"/><circle cx="${cx+22}" cy="${cy+22}" r="3" fill="${p.near}"/>`)+S_el('ac',`<rect x="${w*.74}" y="${h*.16}" width="52" height="70" rx="4" fill="${p.ac}" transform="rotate(8 ${w*.8} ${h*.3})"/><rect x="${w*.1}" y="${h*.2}" width="4.5" height="${h*.6}" rx="2" fill="${p.near}" transform="rotate(24 ${w*.12} ${h*.5})"/><rect x="${w*.14}" y="${h*.2}" width="4.5" height="${h*.6}" rx="2" fill="${p.near}" transform="rotate(30 ${w*.14} ${h*.5})"/>`)+S_el('fg',`<path d="M${cx-14} ${h*.16} q 6 -10 0 -18 M${cx+8} ${h*.17} q 6 -10 0 -18" stroke="${p.mid}" stroke-width="2" fill="none" opacity=".5" stroke-linecap="round"/>`)},
+hotel(r,w,h,p){const bx=w*.3,bw=w*.4,by=h*.82,bh=h*.44;let wins='';for(let i=0;i<4;i++)for(let j=0;j<3;j++){const lit=r()<.25;wins+=`<rect x="${bx+14+i*((bw-28)/4)+((bw-28)/8)}" y="${by-bh+16+j*((bh-40)/3)+8}" width="${((bw-28)/4)-8}" height="${((bh-40)/3)-14}" fill="${lit?p.sun:p.hi}" opacity="${lit?1:.9}"/>`}
+return S_el('sky',`<rect width="${w}" height="${h}" fill="${p.sky}"/>`)+S_el('sun',`<circle cx="${w*.14}" cy="${h*.22}" r="${h*.09}" fill="${p.sun}"/>`)+S_el('hi',clouds(r,w,p.hi,1))+S_el('far',`<rect y="${h*.82}" width="${w}" height="${h*.18}" fill="${p.far}"/>`)+S_el('mid',`<rect x="${bx}" y="${by-bh}" width="${bw}" height="${bh}" fill="${p.mid}"/><rect x="${bx-6}" y="${by-bh-8}" width="${bw+12}" height="10" fill="${p.near}"/>`)+S_el('near',wins+`<path d="M${bx+bw/2-16} ${by} v-26 a16 14 0 0 1 32 0 v26 z" fill="${p.fg}"/>`+[0,1,2,3,4].map(i=>`<rect x="${bx-18+i*14}" y="${by-bh-30}" width="12" height="16" fill="${i%2?p.ac:p.hi}"/>`).join('')+`<rect x="${bx-18}" y="${by-bh-16}" width="70" height="4" fill="${p.near}"/>`+pines(r,w,h,h*.78,p.fg,4))}
+};
+function scene(type,palKey,seed,w=400,h=260){
+  const p=PALS[palKey]||PALS.alpine;
+  let t=type; if(!SCENE[t]){t={coast:'coast',heritage:'heritage',city:'city',food:'food',hotel:'hotel'}[t]||'mountain'}
+  const r=rng(seed||type);
+  return `<div class="scene"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Illustrated travel poster">${SCENE[t](r,w,h,p)}</svg></div>`;
+}
+
+/* ---------- demo destination profiles (clearly simulated data) ---------- */
+const A_=(id,name,area,tag,lat,lng,cost,dur,hrs,rate,rev,blurb,tags)=>({id,name,area,tag,lat,lng,cost,dur,hrs,rate,rev,blurb,tags:tags||[tag]});
+const R_=(id,name,area,cuisine,diet,lat,lng,pp,hrs,rate,rev)=>({id,name,area,cuisine,diet,lat,lng,pp,hrs,rate,rev});
+const H_=(id,name,area,type,rating,rev,price,amen,cancel,dist,sources,lat,lng,alt)=>({id,name,area,type,rating,rev,price,amen,cancel,dist,sources,lat,lng,alt});
+const T_=(id,mode,title,from,to,dep,arr,dur,price,note,src,cond,tags)=>({id,mode,title,from,to,dep,arr,dur,price,note,src,cond,tags});
+
+const DEST={
+manali:{key:'manali',name:'Manali',region:'Himachal Pradesh, India',scene:'mountain',pal:'alpine',center:[32.2432,77.1892],zoom:12,mult:1,road:3.0,
+  dayNames:['Arrival & Old Manali','Town, temple & springs','Solang Valley adventure','Naggar heritage & river','Waterfall & wellness','Departure & markets','Open valley day','Slow last morning'],
+  transport:[
+    T_('t1','bus','Volvo Overnight Sleeper','Delhi · Kashmere Gate','Manali · Mall Road','19:30','08:30','13h 00m · overnight',5400,'Semi-sleeper, blanket & water provided','DemoBus Grid','Non-refundable within 12h of departure',['cheapest','value']),
+    T_('t2','flight','Flight + Hill Taxi','Delhi (DEL) → Kullu (KUU)','Bhuntar → Manali · 47 km road','06:50','10:10','3h 20m door-to-door',17400,'Includes 47 km mountain taxi transfer','DemoAir FareCast','1 cabin bag · hill taxi shared if flight delayed',['fastest','comfort']),
+    T_('t3','car','Private SUV with driver','Delhi · doorstep pickup','Manali · hotel drop','05:00','17:30','12h 30m',21200,'Stops at Pandoh Dam & Kullu viewpoints','DemoDrive Market','Includes driver night allowance & tolls',['comfort']),
+    T_('t4','train','Train + Hill Taxi','Delhi → Chandigarh (Shatabdi)','Chandigarh → Manali · 7h road','07:40','18:45','11h 05m',9100,'Chair-car train, then private taxi','DemoRail Link','Taxi segment subject to mountain road weather',['value','balanced'])],
+  hotels:[
+    H_('h1','Cedar & Pine Lodge','Old Manali','hotel',4.6,812,6200,['Breakfast','Wi-Fi','Parking','Valley view'],'Free cancellation till 48h before check-in',0.4,[['StayIndex',6200],['NestData',6480]],32.2548,77.1806,'Cedar & Pine Lodge & Cottages'),
+    H_('h2','Snowcrest Hotel','Manali Town · Mall Road','hotel',4.3,1540,3800,['Breakfast','Wi-Fi','Room service'],'Free cancellation till 24h before check-in',0.8,[['StayIndex',3800],['RoomLoft',3620]],32.2400,77.1892),
+    H_('h3','Orchard House Homestay','Naggar Road','homestay',4.7,436,4500,['Breakfast','Wi-Fi','Family rooms','Garden'],'Free cancellation till 48h before check-in',2.1,[['NestData',4500]],32.2205,77.1800),
+    H_('h4','Alpine Backpackers Hostel','Old Manali','hostel',4.2,2210,1200,['Wi-Fi','Café','Rooftop terrace'],'Non-refundable · free date change',0.5,[['RoomLoft',1200],['StayIndex',1350]],32.2555,77.1800),
+    H_('h5','Solitude Riverside Resort','Riverside · Shuru','resort',4.5,688,8500,['Breakfast','Wi-Fi','Parking','Pool','Spa'],'Free cancellation till 72h before check-in',3.2,[['StayIndex',8500],['NestData',8320]],32.2700,77.2000),
+    H_('h6','Pinewood Apartment','Manali Town','apartment',4.1,305,2900,['Kitchen','Wi-Fi','Parking'],'Free cancellation till 24h before check-in',1.0,[['RoomLoft',2900]],32.2360,77.1870)],
+  restaurants:[
+    R_('r1','Pine & Plate','Old Manali','Continental · Israeli',['veg','vegan'],32.2540,77.1815,450,'09:00–23:00',4.5,1280),
+    R_('r2','Momo & Thukpa House','Manali Town','Tibetan',['veg','nonveg'],32.2392,77.1890,300,'10:00–21:30',4.4,940),
+    R_('r3','Green Skillet','Manali Town','North Indian · Jain-friendly',['veg','jain'],32.2378,77.1878,400,'11:00–22:30',4.3,610),
+    R_('r4','Trout & Thyme','Naggar','Trout · Continental',['nonveg'],32.1235,77.1730,700,'12:00–22:00',4.6,430),
+    R_('r5','Chai Tara Café','Old Manali','Café · Bakery',['veg'],32.2552,77.1822,250,'08:00–22:00',4.4,880),
+    R_('r6','Sloped Roof Dhaba','Vashisht','Himachali Dham',['veg','jain'],32.2612,77.1884,350,'09:00–21:00',4.5,520),
+    R_('r7','Ember & Oak','Old Manali','Wood-fired pizza · Vegan cheese',['veg','vegan'],32.2560,77.1800,550,'11:00–23:30',4.4,760)],
+  activities:[
+    A_('a1','Hadimba Devi Temple','Manali Town','heritage',32.2432,77.1892,0,'1.5h','08:00–18:00',4.5,2140,'Cedar-forest temple with intricate wood carvings'),
+    A_('a2','Manu Temple','Old Manali','heritage',32.2560,77.1808,0,'1h','07:00–19:00',4.3,1410,'Believed to be the meditative spot of sage Manu'),
+    A_('a3','Old Manali bridge & café stroll','Old Manali','local',32.2536,77.1811,0,'2h','anytime',4.6,1980,'Cross the hanging bridge into cobbled café lanes'),
+    A_('a4','Jogini Waterfall hike','Vashisht','hiking',32.2743,77.1755,500,'3.5h','07:00–16:00',4.7,1120,'Village trail to a 150 ft cascade above Vashisht',['hiking','nature']),
+    A_('a5','Vashisht hot springs','Vashisht','relaxation',32.2605,77.1878,0,'1h','06:30–21:00',4.2,1870,'Sulphur springs beside an old stone temple'),
+    A_('a6','Solang paragliding','Solang Valley','adventure',32.3183,77.1568,1800,'1h flight · half day','09:00–16:00',4.6,2260,'Tandem flight over the Solang meadow with pilots',['adventure']),
+    A_('a7','Solang ropeway & snow point','Solang Valley','nature',32.3170,77.1560,700,'2.5h','09:30–17:00',4.4,1640,'Gondola to the ridge with Beas basin views',['nature','mountains']),
+    A_('a8','Van Vihar nature walk','Manali Town','nature',32.2410,77.1868,30,'1.5h','07:00–19:00',4.3,990,'Deodar grove boardwalk along the Beas river'),
+    A_('a9','Tibetan monastery & handicraft centre','Manali Town','culture',32.2390,77.1904,0,'1h','08:00–19:00',4.2,760,'Colourful prayer wheels and weaving workshops'),
+    A_('a10','Naggar Castle','Naggar','history',32.1220,77.1724,30,'1.5h','09:00–18:00',4.4,830,'A 1460 AD timber-and-stone castle of the Kullu kings'),
+    A_('a11','Roerich Art Gallery','Naggar','museums',32.1180,77.1690,60,'1.5h','10:00–17:00 · Mon closed',4.5,540,'Nicholas Roerich\u2019s Himalayan paintings, hilltop estate'),
+    A_('a12','Riverside cycling · Naggar to Kullu','Naggar','adventure',32.1350,77.1700,400,'2h','07:00–17:00',4.3,380,'A gentle riverside descent through apple orchards'),
+    A_('a13','Mall Road shopping walk','Manali Town','shopping',32.2396,77.1887,0,'2h','10:00–21:00',4.1,1560,'Woollens, handicrafts and the famous Button Bazaar'),
+    A_('a14','Trout fishing experience','Riverside','wildlife',32.2470,77.1850,800,'2h','07:00–17:00',4.4,290,'Catch-and-cook rainbow trout with a local guide'),
+    A_('a15','Golden hour photo walk','Old Manali','photography',32.2530,77.1820,600,'2h','16:30–19:00',4.8,410,'Lead a lens over rooftops, bridges and cedar light'),
+    A_('a16','Café hopping & live music','Old Manali','nightlife',32.2545,77.1815,400,'2.5h','19:00–00:00',4.5,1320,'Open-mic nights and wood-oven snacks after dark')]},
+goa:{key:'goa',name:'Goa',region:'Goa, India',scene:'coast',pal:'coast',center:[15.35,74.05],zoom:10,mult:1,road:2.4,
+  dayNames:['Arrival & beach sunset','Fontainhas & Old Goa','North beaches & market','Falls & spice country','South Goa slow day','Departure & café morning','Waterfall day','Island morning'],
+  transport:[
+    T_('t1','flight','Direct Flight','Delhi (DEL) → Goa (GOI)','Airport → hotel transfer incl.','08:20','11:05','2h 45m + 45m transfer',21600,'IndiGo-class economy, 7kg cabin','DemoAir FareCast','Fare varies by booking window',['fastest','value']),
+    T_('t2','train','Overnight Train + Taxi','Delhi (NZM) → Madgaon (MAO)','Station → South Goa hotel','06:55','10:20','27h · onboard','2023',16600,'AC 2-tier, bedding included','DemoRail Link','Waitlist possible in peak season',['cheapest']),
+    T_('t3','car','Self-drive via Mumbai','Delhi → Goa','Doorstep to hotel parking','05:00','21:00','16h driving',28900,'Fuel, tolls & hotels en route included','DemoDrive Market','Returns car drop-off fee applies',['comfort'])],
+  hotels:[
+    H_('h1','Mandrem Beach House','North Goa · Mandrem','resort',4.6,720,7400,['Breakfast','Wi-Fi','Pool','Beachfront'],'Free cancellation till 72h',1.2,[['StayIndex',7400],['NestData',7180]],15.5412,73.7668,'Mandrem Beach House & Cottages'),
+    H_('h2','Fontainhas Colour House','Panjim · Fontainhas','homestay',4.5,388,4800,['Breakfast','Wi-Fi','Heritage building'],'Free cancellation till 48h',0.5,[['NestData',4800]],15.4936,73.8286),
+    H_('h3','Palolem Palm Huts','South Goa · Palolem','hotel',4.3,1120,2600,['Wi-Fi','Beach bar','Hammock deck'],'Free cancellation till 24h',0.2,[['RoomLoft',2600],['StayIndex',2750]],15.0100,74.0230),
+    H_('h4','Anjuna Backpack Club','North Goa · Anjuna','hostel',4.1,1980,1100,['Wi-Fi','Pool','Café'],'Non-refundable',1.0,[['RoomLoft',1100]],15.5740,73.7390),
+    H_('h5','Saligao Villa Verde','North Goa · Saligao','apartment',4.7,240,9800,['Kitchen','Wi-Fi','Pool','Parking'],'Free cancellation till 7 days',3.0,[['StayIndex',9800]],15.5660,73.7820)],
+  restaurants:[
+    R_('r1','Susegad Kitchen','Panjim','Goan',['nonveg'],15.4940,73.8290,600,'12:00–23:00',4.6,840),
+    R_('r2','Fish Curry Shack','South Goa · Palolem','Goan seafood',['nonveg'],15.0120,74.0240,450,'11:00–22:00',4.5,620),
+    R_('r3','Café Balcão','Panjim','Café · Bakery',['veg'],15.4960,73.8260,300,'08:00–22:00',4.4,980),
+    R_('r4','Spice & Coconut','North Goa · Assagao','Vegetarian · Vegan',['veg','vegan'],15.5870,73.7670,500,'09:00–23:00',4.7,540),
+    R_('r5','Beachfire Grill','North Goa · Anjuna','Grill · Bar',['nonveg'],15.5750,73.7400,700,'17:00–01:00',4.3,760)],
+  activities:[
+    A_('a1','Fontainhas heritage walk','Panjim','culture',15.4920,73.8270,500,'2h','09:00–18:00',4.7,920,'Lisbon-toned Latin quarter with baker stops',['culture','history']),
+    A_('a2','Old Goa churches','Panjim & Old Goa','history',15.5009,73.9112,0,'2.5h','09:00–18:30',4.5,1310,'Basilica of Bom Jesus & Se Cathedral'),
+    A_('a3','Fort Aguada sunset','North Goa','nature',15.4920,73.7740,0,'1.5h','anytime',4.4,1540,'A 1612 Portuguese fort over the Mandovi mouth'),
+    A_('a4','Dudhsagar Falls jeep trip','South Goa','adventure',15.3144,74.3144,1500,'6h','07:00–15:00',4.6,2280,'Four-tier monsoon giant through jungle track',['adventure','nature']),
+    A_('a5','Palolem beach day','South Goa','beaches',15.0100,74.0230,0,'4h','anytime',4.7,1810,'Crescent bay, kayak rentals, shack hammocks'),
+    A_('a6','Kayaking · Nerul backwaters','North Goa','adventure',15.5120,73.7690,900,'2h','07:00–17:00',4.5,430,'Mangrove channels with kingfisher sightings'),
+    A_('a7','Anjuna flea market','North Goa','shopping',15.5760,73.7390,0,'2.5h','Wed only · 08:00–18:00',4.2,1150,'The classic Wednesday hippie market'),
+    A_('a8','Spice plantation tour','Panjim & Old Goa','local',15.4390,74.0130,700,'3h','09:00–16:00',4.4,670,'Cardamom trails with a Goan buffet lunch'),
+    A_('a9','Goan cooking class','North Goa','food',15.5600,73.7620,1800,'3.5h','10:00 & 16:00',4.8,390,'Xacuti, vindaloo & sol kadhi from a home kitchen'),
+    A_('a10','Sunset cruise · Mandovi','Panjim','relaxation',15.4980,73.8230,800,'2h','17:30 & 19:30',4.1,890,'Live deck music as dolphins surface'),
+    A_('a11','Beach shack night','North Goa','nightlife',15.5720,73.7420,600,'2.5h','19:00–01:00',4.4,720,'Silent-disco headphones on the sand'),
+    A_('a12','Latin quarter photo walk','Panjim','photography',15.4930,73.8280,400,'2h','07:00–10:00',4.6,340,'Golden light on yellow facades and azulejos')]},
+jaipur:{key:'jaipur',name:'Jaipur',region:'Rajasthan, India',scene:'heritage',pal:'heritage',center:[26.9124,75.7873],zoom:12,mult:1,road:2.6,
+  dayNames:['Arrival & bazaar evening','Amer Fort & golden hour','Pink City icons','Crafts, hills & rooftop','Havelis & stepwells','Departure & thali','Hills & sunsets','Markets & chai'],
+  transport:[
+    T_('t1','flight','Direct Flight','Delhi (DEL) → Jaipur (JAI)','Airport → hotel incl.','07:30','08:35','1h 05m + 40m transfer',9800,'Economy, 15kg check-in','DemoAir FareCast','Morning fares sell fast',['fastest']),
+    T_('t2','train','Shatabdi Express','Delhi (NDLS) → Jaipur (JP)','Station → hotel taxi incl.','06:05','10:40','4h 35m + 30m transfer',6300,'Chair car, breakfast served','DemoRail Link','Indian rail IRCTC booking required',['cheapest','value']),
+    T_('t3','car','Private AC Sedan','Delhi → Jaipur','Door to door','06:00','11:30','5h 30m via NH48',11400,'Cruise-controlled highway run','DemoDrive Market',['comfort'])],
+  hotels:[
+    H_('h1','Haveli Amar Kothi','Amer Road','hotel',4.6,940,5600,['Breakfast','Wi-Fi','Rooftop pool','Courtyard'],'Free cancellation till 48h',1.5,[['StayIndex',5600],['NestData',5880]],26.9420,75.8560,'Haveli Amar Kothi Heritage'),
+    H_('h2','Pink City Rooftop House','Pink City','homestay',4.5,512,3400,['Breakfast','Wi-Fi','Hawa Mahal view'],'Free cancellation till 24h',0.6,[['NestData',3400]],26.9230,75.8250),
+    H_('h3','Aravalli Courtyard Hotel','Civil Lines','hotel',4.2,1660,4100,['Breakfast','Wi-Fi','Parking','Restaurant'],'Free cancellation till 24h',2.2,[['StayIndex',4100],['RoomLoft',3950]],26.9050,75.7980),
+    H_('h4','Bazaar Bed Hostel','Pink City','hostel',4.2,2410,900,['Wi-Fi','Rooftop café','Lockers'],'Non-refundable',0.8,[['RoomLoft',900]],26.9200,75.8230)],
+  restaurants:[
+    R_('r1','Chowk Rasoi','Pink City','Rajasthani thali',['veg','jain'],26.9210,75.8230,450,'12:00–23:00',4.6,1130),
+    R_('r2','Tandoor & Rose','Amer Road','North Indian',['nonveg'],26.9440,75.8540,650,'12:00–23:30',4.4,760),
+    R_('r3','Café Amrita','Pink City','Café · Vegan',['veg','vegan'],26.9240,75.8260,350,'08:30–22:30',4.5,680),
+    R_('r4','Kachori Adda','Pink City','Street food',['veg'],26.9180,75.8200,120,'07:00–20:00',4.3,1520),
+    R_('r5','Terrace 1740','Amer Road','Continental · Rooftop',['nonveg'],26.9430,75.8550,800,'17:00–00:00',4.6,430)],
+  activities:[
+    A_('a1','Amber Fort','Amer Road','history',26.9855,75.8513,200,'3h','08:00–17:30',4.7,4120,'Hilltop mirror-palace with Sheesh Mahal',['history','culture']),
+    A_('a2','Hawa Mahal','Pink City','heritage',26.9239,75.8267,50,'1h','09:00–16:30',4.4,3240,'The 953-window pink palace façade'),
+    A_('a3','City Palace & armoury','Pink City','museums',26.9258,75.8237,300,'2.5h','09:30–17:00',4.5,2810,'Still-royal courtyards and textile museum'),
+    A_('a4','Jantar Mantar','Pink City','museums',26.9247,75.8246,50,'1h','09:00–16:30',4.3,1490,'Giant 18th-century sundials, UNESCO listed'),
+    A_('a5','Nahargarh sunset point','Nahargarh & hills','nature',26.9374,75.8156,50,'2h','10:00–18:00',4.6,1980,'The whole pink city turns amber below you'),
+    A_('a6','Block printing workshop','Pink City','local',26.9200,75.8200,900,'2h','10:00 & 15:00',4.8,460,'Carve, dye and take home your Sanganeri scarf'),
+    A_('a7','Jal Mahal viewpoint','Amer Road','photography',26.9535,75.8462,0,'45m','anytime',4.3,2140,'The palace that floats on Man Sagar lake'),
+    A_('a8','Albert Hall Museum','Pink City','museums',26.9117,75.8195,300,'1.5h','09:00–17:00 · 19:00–21:30',4.3,1760,'Indo-Saracenic museum, lit like a jewel at night'),
+    A_('a9','Galtaji monkey temple','Nahargarh & hills','wildlife',26.8830,75.8510,0,'2h','06:00–19:00',4.2,980,'Spring-fed tanks in a ravine of macaques'),
+    A_('a10','Johari & Bapu Bazaar walk','Pink City','shopping',26.9160,75.8220,0,'2.5h','11:00–20:00',4.3,1930,'Jewellery, mojari shoes, lassi stops'),
+    A_('a11','Rooftop folk evening','Amer Road','nightlife',26.9420,75.8560,600,'2h','19:00–22:00',4.5,520,'Kalbelia dance under fort floodlights'),
+    A_('a12','Pink City photo walk','Pink City','photography',26.9230,75.8250,500,'2h','07:00–09:00',4.7,380,'Empty streets, pink light, chai with pandits')]},
+bali:{key:'bali',name:'Bali',region:'Indonesia',scene:'coast',pal:'meadow',center:[-8.5069,115.2625],zoom:9,mult:0.45,road:3.2,
+  dayNames:['Arrival & Ubud dusk','Rice terraces & springs','East temples & waterfalls','Kintamani sunrise','Surf & sunset clubs','Uluwatu cliff & Kecak','Spa & slow day','Departure & market'],
+  transport:[
+    T_('t1','flight','One-stop Flight','Delhi (DEL) → Denpasar (DPS)','Airport → Ubud transfer incl.','10:45','22:40','~9h 55m · 1 stop',52400,'Economy, 25kg baggage','DemoAir FareCast','Visa-on-arrival fee not included',['fastest']),
+    T_('t2','flight','Two-stop Saver','Delhi → Denpasar','Airport → Ubud transfer incl.','03:20','17:10','~14h · 2 stops',38900,'Longest layover, lowest fare','DemoAir FareCast','Tight connection risk in peak dates',['cheapest']),
+    T_('t3','flight','Morning One-stop','Delhi → Denpasar','Airport → Ubud transfer incl.','08:15','19:30','~10h 15m · 1 stop',56100,'Best arrival time for jet lag','DemoAir FareCast',['comfort','value'])],
+  hotels:[
+    H_('h1','Ubud Rice Terrace Villa','Ubud','resort',4.7,862,6900,['Breakfast','Wi-Fi','Infinity pool','Spa'],'Free cancellation till 7 days',0.9,[['StayIndex',6900],['NestData',7120]],-8.5069,115.2625,'Ubud Rice Terrace Villa & Spa'),
+    H_('h2','Canggu Surf Lodge','Canggu','hostel',4.3,1720,1500,['Wi-Fi','Pool','Surf storage'],'Free cancellation till 48h',0.4,[['RoomLoft',1500]],-8.6478,115.1385),
+    H_('h3','Uluwatu Cliff Retreat','Uluwatu','hotel',4.6,440,8300,['Breakfast','Wi-Fi','Ocean view','Yoga deck'],'Free cancellation till 72h',1.1,[['StayIndex',8300],['NestData',8150]],-8.8150,115.0890),
+    H_('h4','Seminyak Garden Resort','Seminyak','resort',4.4,1290,5400,['Breakfast','Wi-Fi','Pool','Family rooms'],'Free cancellation till 48h',0.6,[['StayIndex',5400]],-8.6910,115.1590)],
+  restaurants:[
+    R_('r1','Warung Sari','Ubud','Indonesian',['veg'],-8.5080,115.2620,220,'08:00–21:30',4.6,910),
+    R_('r2','Jimbaran Fish Grill','Uluwatu','Seafood BBQ',['nonveg'],-8.7900,115.1660,520,'11:00–23:00',4.5,780),
+    R_('r3','Green Buddha Café','Ubud','Vegan · Raw',['veg','vegan'],-8.5100,115.2600,300,'07:30–22:00',4.7,640),
+    R_('r4','Nasi Market Tables','Canggu','Street food',['nonveg'],-8.6490,115.1400,180,'17:00–00:00',4.4,530),
+    R_('r5','Sunset Deck','Uluwatu','Bar bites · Grill',['nonveg'],-8.8140,115.0880,600,'08:00–23:00',4.3,420)],
+  activities:[
+    A_('a1','Tegallalang rice terraces','Ubud','nature',-8.4310,115.2790,60,'2h','07:00–18:00',4.4,3120,'Emerald terraces and jungle swings',['nature','photography']),
+    A_('a2','Ubud Monkey Forest','Ubud','wildlife',-8.5188,115.2586,110,'1.5h','09:00–18:00',4.3,4210,'Banyan-root temples with cheeky macaques'),
+    A_('a3','Tirta Empul temple','Ubud','culture',-8.4156,115.3155,80,'2h','08:00–18:00',4.5,1980,'Purification ritual in sacred spring water'),
+    A_('a4','Mount Batur sunrise trek','Kintamani','hiking',-8.2422,115.3750,700,'6h round trip','02:00 pickup',4.8,2640,'Summit by dawn above a volcanic caldera',['hiking','adventure']),
+    A_('a5','Uluwatu temple & Kecak fire dance','Uluwatu','culture',-8.8291,115.0849,220,'3h','16:00–19:30',4.7,3510,'Cliff temple at dusk with fire-chant dance'),
+    A_('a6','Surf lesson · Canggu','Canggu','adventure',-8.6478,115.1385,900,'2.5h','08:00 & 15:00',4.6,1480,'Beginner break with soft-top boards'),
+    A_('a7','Tibumana waterfall swim','Ubud','nature',-8.4590,115.3930,40,'2h','08:00–17:00',4.6,1320,'A single silk curtain into a deep green pool'),
+    A_('a8','Balinese cooking class','Ubud','food',-8.5150,115.2630,650,'4h','08:00 & 14:00',4.9,880,'Market run, base gede, bamboo-steamer lunch'),
+    A_('a9','Nusa Penida day trip','Canggu & Seminyak','beaches',-8.7278,115.5444,1100,'9h','06:30–18:00',4.6,2210,'Kelingking cliff & snorkelling with mantas'),
+    A_('a10','Flower bath & massage','Ubud','relaxation',-8.5060,115.2610,450,'2h','09:00–20:00',4.8,760,'Petal-strewn tub and two-hour Balinese massage'),
+    A_('a11','Denpasar night market','Canggu & Seminyak','food',-8.6530,115.2160,150,'2h','17:00–23:00',4.3,690,'Sate sticks, dadar gulung, fresh joss? no—coconut'),
+    A_('a12','Cliff sunset photo session','Uluwatu','photography',-8.8160,115.0910,550,'1.5h','16:30–18:00',4.7,340,'Golden light over the reef break')]},
+};
+function synth(name,opts={}){
+  const o=Object.assign({mult:1,road:2.8,pal:'alpine',scene:'mountain',center:[20.59,78.96],zoom:5,anchors:null,foods:null},opts);
+  const r=rng(name);const key='x'+(o.center[0]*10|0);
+  const spots=o.anchors||[['Old Town heritage walk',o.center[0]+.01,o.center[1]+.01,'culture',0],['Central market & bazaar',o.center[0]-.008,o.center[1]+.014,'shopping',0],['City museum & galleries',o.center[0]+.012,o.center[1]-.01,'museums',300],['Viewpoint & sunset ridge',o.center[0]+.02,o.center[1]-.02,'nature',0],['Riverside & bridges',o.center[0]-.015,o.center[1]-.008,'local',0],['Cooking class & food street',o.center[0]+.004,o.center[1]+.006,'food',900],['Nature trail & falls',o.center[0]+.035,o.center[1]+.03,'hiking',400],['Craft quarter & workshops',o.center[0]-.02,o.center[1]+.02,'local',300]];
+  const HN=['Garden Inn','Central Boutique','Riverside Lodge','The Heritage House','Backpackers Base'];
+  const acts=spots.map((s,i)=>A_('s'+i,s[0],s[0].split(' ')[0],s[3],s[1],s[2],Math.round((s[4]||0)/o.mult),'2h','09:00–18:00',+(4.2+r()*.6).toFixed(1),200+((r()*900)|0),'A signature '+name.toLowerCase()+' experience picked for this route'));
+  const hotels=HN.map((n,i)=>H_('sh'+i,name+' '+n,['Old Town','Central','Riverside'][i%3],['hotel','homestay','hostel','hotel','apartment'][i],+(4.1+r()*.7).toFixed(1),300+((r()*800)|0),Math.round((2400+r()*4200)/o.mult/50)*50*o.mult,['Breakfast','Wi-Fi','Parking'],'Free cancellation till 48h',+(r()*2.5).toFixed(1),[['StayIndex',1]],o.center[0]+(r()-.5)*.04,o.center[1]+(r()-.5)*.04));
+  const rests=(o.foods||['Local kitchen','Garden café','Street food court','Rooftop grill','Old town tavern']).map((n,i)=>R_('sr'+i,n,['Old Town','Central','Riverside'][i%3],'Regional',['veg','nonveg','vegan','jain'].filter(()=>r()>.4).concat(['veg']),o.center[0]+(r()-.5)*.05,o.center[1]+(r()-.5)*.05,Math.round((200+r()*400)/o.mult),'10:00–22:30',+(4.2+r()*.6).toFixed(1),300+((r()*700)|0)));
+  return {key,name,region:name,scene:o.scene,pal:o.pal,center:o.center,zoom:o.zoom,mult:o.mult,road:o.road,
+    dayNames:['Arrival & first look','Old quarters & culture','Nature & viewpoints','Markets & flavours','Wellness & slow day','Departure & cafés','Extra exploring day','Easy last morning'],
+    transport:[
+      T_('st1','flight','Flight to '+name,'Your origin airport',name+' airport','08:30','varies','varies by route',Math.round(9000*o.mult),'Economy class · demo fare','DemoAir FareCast','Fares vary widely by booking window',['fastest','value']),
+      T_('st2','train','Rail to '+name,'Your origin station',name+' station','07:00','15:30','8h 30m',Math.round(3600*o.mult),'AC class · demo fare','DemoRail Link',['cheapest','value']),
+      T_('st3','bus','Intercity coach','Your origin',name+' bus stand','21:00','07:30','10h 30m',Math.round(2200*o.mult),'Semi-sleeper · demo fare','DemoBus Grid',['cheapest'])],
+    hotels,restaurants:rests,activities:acts};
+}
+DEST.tokyo=synth('Tokyo',{mult:1.7,road:3.6,pal:'dusk',scene:'city',center:[35.68,139.72],zoom:11,anchors:[['Asakusa & Senso-ji',35.7148,139.7967,'heritage',0],['Meiji Shrine forest walk',35.6764,139.6993,'culture',0],['Shibuya crossing & towers',35.6595,139.7005,'local',0],['Tsukiji outer market breakfast',35.6654,139.7707,'food',600],['Ueno museums & park',35.7156,139.7745,'museums',300],['Sumida river cruise',35.6760,139.8020,'relaxation',700],['Shinjuku night food alley',35.6938,139.7034,'nightlife',900],['Harajuku & Omotesando',35.6702,139.7027,'shopping',0]]});
+DEST.kerala=synth('Kerala', {mult:1,road:3.4,pal:'meadow',scene:'mountain',center:[9.9,76.6],zoom:8,anchors:[['Fort Kochi heritage walk',9.9652,76.2420,'history',300],['Chinese fishing nets at dusk',9.9652,76.2400,'photography',0],['Kathakali performance',9.9580,76.2430,'culture',400],['Munnar tea gardens',10.0889,77.0595,'nature',0],['Eravikulam national park',10.1665,77.0580,'wildlife',250],['Alleppey backwater cruise',9.4981,76.3388,'relaxation',1800],['Thekkady spice plantation',9.6013,77.1633,'local',500],['Ayurvedic massage & yoga',9.9400,76.2600,'relaxation',900]]});
+DEST.ladakh=synth('Ladakh',{mult:1,road:2.6,pal:'ember',scene:'mountain',center:[34.15,77.58],zoom:9,anchors:[['Leh Palace',34.1648,77.5848,'history',150],['Shanti Stupa sunset',34.1826,77.5823,'photography',0],['Thiksey monastery morning prayers',34.0646,77.6689,'culture',50],['Hemis festival courtyard',33.9130,77.6990,'culture',200],['Pangong Tso day trip',33.7500,78.6667,'nature',900],['Khardung La & Nubra dunes',34.3528,77.5660,'adventure',1200],['Old Leh market walk',34.1650,77.5850,'shopping',0],['Confluence of the Indus & Zanskar',34.0830,77.5400,'nature',0]]});
+
+/* ---------- static config ---------- */
+const CURRENCIES=[['INR','₹ · Indian Rupee'],['USD','$ · US Dollar'],['EUR','€ · Euro'],['GBP','£ · British Pound'],['NZD','NZ$ · New Zealand Dollar'],['AED','AED · UAE Dirham'],['SGD','S$ · Singapore Dollar'],['JPY','¥ · Japanese Yen'],['THB','฿ · Thai Baht'],['AUD','A$ · Australian Dollar']];
+const RATE={INR:1,USD:83.2,EUR:90.1,GBP:105.6,NZD:52.4,AED:22.7,SGD:61.8,JPY:.56,THB:2.35,AUD:55.3};
+const SYM={INR:'₹',USD:'$',EUR:'€',GBP:'£',NZD:'NZ$',AED:'AED ',SGD:'S$',JPY:'¥',THB:'฿',AUD:'A$'};
+const CURGRP={INR:'en-IN'};
+const INTERESTS=[['nature','leaf'],['hiking','mountain'],['adventure','tent'],['beaches','waves'],['mountains','mountain'],['history','landmark'],['museums','bank'],['culture','palette'],['shopping','bag'],['photography','camera'],['food','utensils'],['nightlife','music'],['relaxation','lotus'],['entertainment','ticket'],['wildlife','paw'],['local','compass']];
+const CUISINES=['North Indian','South Indian','Tibetan','Himachali','Goan','Rajasthani','Kerala','Chinese','Italian','Continental','Japanese','Thai','Street food','Café & bakery','Desserts'];
+const STYLES=[['budget','wallet','Count every rupee'],['balanced','scale','Best mix of price & comfort'],['comfort','bed','Space, service, easy logistics'],['luxury','gem','The finest of everything'],['adventure','tent','Push the pace, chase the thrill'],['relaxed','lotus','Fewer things, slower days'],['experience','spark','Unique, memorable, local']];
+const NEEDS=['Accessibility needs','Travelling with children','Senior travellers','Avoid long walks','Avoid crowded places'];
+const REGISTRY={
+  transport:[['DemoAir FareCast','flight fares',4],['DemoRail Link','trains',4],['DemoBus Grid','intercity bus',3],['DemoDrive Market','cabs & self-drive',3]],
+  stay:[['StayIndex','hotels & resorts',4],['NestData','homestays & apartments',3],['RoomLoft','hostels & budget stays',3]],
+  food:[['PlateScout','restaurants & menus',4],['MapBites','maps & opening hours',3]],
+  activity:[['TrailDeck','tours & outdoors',4],['CityPass Data','attractions & hours',3]]};
+const CATCOL={transport:'#E4572E',stay:'#0E7C6B',food:'#DE9A2E',activities:'#37819E',local:'#5C8A46',buffer:'#5B6E77'};
+
+/* ---------- state ---------- */
+const today=()=>new Date().toISOString().slice(0,10);
+const plusDays=n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10);
+const S={screen:'landing',step:0,mode:'best',daySel:0,scopeTouched:false,cmp:new Set(),chat:[],
+  trip:{origin:'',destinations:[],depDate:'',retDate:'',timePref:'any',adults:2,children:0,
+    currency:'INR',amount:'',scope:{transport:true,stay:true,food:true,activities:true,local:true},
+    transport:{modes:[],priority:'best value'},
+    stay:{type:'no-pref',minRating:4.0,maxNight:'',area:'',amen:[],notes:''},
+    food:{diet:'none',allergies:[],cuisines:[]},
+    interests:[],customInterests:[],style:'balanced',needs:[],checkin:'any',notes:''},
+  plan:null,flags:{relaxed:false},extras:[],researched:false};
+const P={prof:null,days:0,pax:2,rooms:1,budgetINR:0,transport:[],hotels:[],restaurants:[],activities:[],itin:[],costs:null,sel:{},checkedAt:{},geoNote:'',dedupeNote:''};
+function fmt(inr,dec=0){const v=inr*RATE[S.trip.currency];return SYM[S.trip.currency]+v.toLocaleString(CURGRP[S.trip.currency]||'en-US',{maximumFractionDigits:dec,minimumFractionDigits:0})}
+
+/* ---------- tag/scene helpers ---------- */
+function actScene(a,prof){const t=a.tags?.[0]||a.tag;
+  if(t==='food')return 'food'; if(t==='beaches'||t==='relaxation'&&prof.scene==='coast')return 'coast';
+  if(t==='history'||t==='culture'||t==='heritage'||t==='museums')return 'heritage';
+  if(t==='nightlife'||t==='entertainment'||prof.scene==='city')return 'city';
+  if(t==='adventure')return 'mountain'; return prof.scene}
+function dietBadge(d){const m={veg:['veg','Vegetarian'],vegan:['vegan','Vegan'],jain:['jain','Jain-friendly'],nonveg:['nonveg','Non-veg'],none:['any','Everything'],any:['any','Everything']};const x=m[d]||m.any;return `<span class="dietb ${x[0]}">${x[1]}</span>`}
+
+/* =========================================================
+   LANDING
+   ========================================================= */
+const DESTS_LAND=['manali','goa','jaipur','bali','tokyo','kerala','ladakh'];
+function renderLanding(){
+  S.screen='landing';stopHeroCycle();
+  const cards=DESTS_LAND.map(k=>{const d=DEST[k];const nights=5;const est=Math.round(d.hotels[0].price*nights+9000*d.mult); // rough demo anchor
+    return `<button class="dcard" onclick="A.pickDest('${k}')">
+      <div class="art">${scene(d.scene,d.pal,k,400,300)}</div>
+      <div class="body"><h3>${d.name}</h3><div class="meta">${d.region}</div>
+      <div class="from">${ic2('spark')} 5N demo from ${fmt(18000*d.mult)} · tap to plan</div></div></button>`}).join('');
+  $('#app').innerHTML=`
+  <div class="nav"><div class="wrap">
+    <div class="logo">${ic2('compass')} Voyara</div>
+    <a class="nl" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">How it works</a>
+    <a class="nl" onclick="document.getElementById('where').scrollIntoView({behavior:'smooth'})">Where to</a>
+    <a class="nl" onclick="document.getElementById('honest').scrollIntoView({behavior:'smooth'})">Real vs demo</a>
+    <div class="sp"></div><span class="pill demo">${ic2('info')} Phase 1 preview</span>
+    <button class="btn btn-flame btn-sm" onclick="A.start()">Plan a trip</button>
+  </div></div>
+
+  <section class="hero"><div class="hero-grid">
+    <div class="hero-copy wrap" style="padding-left:28px">
+      <span class="overline">Your AI travel agency</span>
+      <h1>Tell us where.<br>We handle the <em>everywhere.</em></h1>
+      <p class="sub">Voyara researches transport, stays, food and things to do across multiple configured sources, compares and normalises everything, then assembles a day-by-day plan tuned to your budget — with every price stamped “when checked”.</p>
+      <div class="hero-cta">
+        <button class="btn btn-flame" onclick="A.start()">Start planning ${ic2('arrow')}</button>
+        <button class="btn btn-ghost" style="border-color:rgba(246,238,220,.5);color:var(--cream)" onclick="A.sample()">See a demo plan</button>
+      </div>
+      <div class="trust">
+        <span>${ic2('shield')} Sources cited on every card</span>
+        <span>${ic2('clock')} “When checked” pricing</span>
+        <span>${ic2('route')} Geo-grouped days</span>
+      </div>
+    </div>
+    <div class="hero-art" id="heroArt"></div>
+  </div></section>
+
+  <div class="marquee"><div class="marquee-in" id="tick"></div></div>
+
+  <section class="sect how" id="how"><div class="wrap">
+    <div class="sect-head"><span class="overline">How it works</span>
+      <h2>Three moves from<br>“someday” to a real plan.</h2></div>
+    <div class="howrow">
+      <svg class="howpath" viewBox="0 0 1100 120" preserveAspectRatio="none">
+        <path id="hp" d="M60 60 C 260 -10, 380 110, 560 55 S 900 0, 1050 60"/>
+        <circle r="5" fill="#E4572E"><animateMotion dur="7s" repeatCount="indefinite"><mpath href="#hp"/></animateMotion></circle>
+      </svg>
+      <div class="howstep"><div class="num">01</div><h3>Brief your agent</h3>
+        <p>Seven quick steps — destination, dates, budget, transport, stay, food, interests. Maya asks only what actually changes your plan.</p></div>
+      <div class="howstep"><div class="num">02</div><h3>We research &amp; compare</h3>
+        <p>Transport, stays, restaurants and activities are pulled from a configurable source registry, normalised, de-duplicated and price-stamped.</p></div>
+      <div class="howstep"><div class="num">03</div><h3>You get a plan, not a link dump</h3>
+        <p>A geo-optimised day-by-day itinerary, an honest budget breakdown, and an agent that edits it live when you say “make it cheaper”.</p></div>
+    </div>
+  </div></section>
+
+  <section class="sect" id="where" style="padding-top:40px"><div class="wrap">
+    <div class="sect-head"><span class="overline">Where to</span>
+      <h2>Pick a poster. Start a plan.</h2></div>
+    <div class="destrow">${cards}</div>
+    <p class="hint" style="padding:0 4px">${ic2('info')} These demo plans use simulated prices. Live source research arrives in Phase 2.</p>
+  </div></section>
+
+  <section class="sect" id="honest" style="padding-top:20px"><div class="wrap">
+    <div class="realdemo">
+      <div><span class="coltag" style="color:#7FD8A8">What’s real in this build</span><h3>The whole product experience</h3>
+        <ul><li>${ic2('check','ok')} Full onboarding, budget scoping and validation</li>
+        <li>${ic2('check','ok')} Conversational follow-ups when something’s missing</li>
+        <li>${ic2('check','ok')} Source registry, normalisation & price-stamp UI patterns</li>
+        <li>${ic2('check','ok')} Mode switching that genuinely re-optimises the demo plan</li>
+        <li>${ic2('check','ok')} An assistant that edits the itinerary, not just chats</li></ul></div>
+      <div><span class="coltag" style="color:var(--gold)">What’s simulated</span><h3>Research &amp; pricing</h3>
+        <ul><li>${ic2('info')} All prices, ratings, availability and reviews are placeholder data</li>
+        <li>${ic2('info')} Sources named “Demo* / Index” are UI stand-ins for real APIs</li>
+        <li>${ic2('info')} “When checked” timestamps demonstrate live-mode semantics</li>
+        <li>${ic2('info')} Live research tooling connects in Phases 2–7</li></ul></div>
+    </div>
+  </div></section>
+
+  <footer><div class="wrap">
+    <div class="logo" style="font-size:17px">${ic2('compass')} Voyara</div>
+    <span>Phase 1 · frontend experience — nothing here claims to be a live quote.</span>
+    <span>© ${new Date().getFullYear()} Voyara demo</span>
+  </div></footer>`;
+  $('#tick').innerHTML=Array(2).fill(DESTS_LAND.map(k=>`<b>${DEST[k].name.toUpperCase()}</b><i>·</i>`).join('')).join('');
+  const art=$('#heroArt');
+  art.innerHTML=SCENE_hero();
+  startHeroCycle();
+}
+function SCENE_hero(){ // hero with role-tagged elements for the day-cycle animation
+  const p=PALS.alpine,r=rng('voyarahero');
+  return `<div class="scene"><svg viewBox="0 0 640 640" preserveAspectRatio="xMidYMid slice">
+  ${S_el('sky',`<rect width="640" height="640" fill="${p.sky}"/>`)}
+  ${S_el('sun',`<circle cx="470" cy="180" r="66" fill="${p.sun}"/>`)}
+  ${S_el('hi',clouds(r,640,p.hi,2))}
+  ${S_el('far',ridge(r,640,640,320,100,p.far))}
+  ${S_el('mid',ridge(r,640,640,392,115,p.mid))}
+  ${S_el('ac',birds(r,640,640,p.fg,3)+balloon(r,150,210,1.5,p.ac,p.hi))}
+  ${S_el('near',ridge(r,640,640,474,95,p.near)+pines(r,640,640,505,p.fg,10))}
+  </svg></div>`;
+}
+let heroRAF=null;
+function startHeroCycle(){
+  const seq=[PALS.alpine,PALS.ember,PALS.dusk,PALS.alpine];let i=0,t0=performance.now();
+  const HOLD=3600,MOVE=4200;
+  function frame(t){const els=$$('#heroArt [data-r]');if(!els.length)return;
+    const cycle=(t-t0)%(HOLD+MOVE),p=cycle<MOVE?cycle/MOVE:1;
+    const A=seq[i%seq.length],B=seq[(i+1)%seq.length];
+    els.forEach(el=>{const r=el.dataset.r;if(!A[r])return;const c=mixHex(A[r],B[r],p);
+      el.querySelectorAll('[fill]').forEach(n=>n.setAttribute('fill',c));
+      el.querySelectorAll('[stroke]').forEach(n=>{if(!n.getAttribute('fill')||n.getAttribute('fill')==='none')n.setAttribute('stroke',c)})});
+    if(cycle>=HOLD+MOVE-16)i++;
+    heroRAF=requestAnimationFrame(frame)}
+  heroRAF=requestAnimationFrame(frame);
+}
+function stopHeroCycle(){if(heroRAF)cancelAnimationFrame(heroRAF)}
+
+/* =========================================================
+   ONBOARDING
+   ========================================================= */
+const OB=[
+ {k:'basics',t:'The essentials',say:s=>`Where to, and when? I’ll shape every day around your dates.`},
+ {k:'budget',t:'Your budget',say:s=>`Give me a number — I’ll fit the plan inside it and show exactly where it goes.`},
+ {k:'transport',t:'Getting there',say:s=>`How do you like to move? Mountains make buses slow but beautiful.`},
+ {k:'stay',t:'Where you sleep',say:s=>`Tell me your sleep style — I’ll weigh price, rating and location.`},
+ {k:'food',t:'How you eat',say:s=>`Food is half the trip. Any rules I should cook around?`},
+ {k:'interests',t:'What you love',say:s=>`Pick at least three — this is what I optimise the itinerary for.`},
+ {k:'style',t:'Style & needs',say:s=>`Last thing: your pace, and anything I should be careful about.`},
+ {k:'review',t:'Review & confirm',say:s=>`Here’s your brief. Check it over — then I’ll start researching.`}];
+function tripDays(){const{depDate:d,retDate:r}=S.trip;if(!d||!r)return 0;return Math.max(0,Math.round((new Date(r)-new Date(d))/864e5))}
+function tripNights(){return Math.max(0,tripDays()-0)||0}
+function renderOnboard(){
+  S.screen='onboard';stopHeroCycle();
+  const st=S.step,cur=OB[st];
+  $('#app').innerHTML=`
+  <div class="ob">
+    <div class="ob-top"><div class="wrap">
+      <div class="logo" style="font-size:19px">${ic2('compass')} Voyara</div>
+      <div class="ob-prog"><i style="width:${(st/(OB.length-1))*100}%"></i></div>
+      <button class="btn btn-ghost btn-sm" onclick="A.go('landing')">${ic2('back')} Home</button>
+    </div></div>
+    <div class="ob-grid">
+      <div class="rail">
+        <div class="agent"><div class="ava">${ic2('bot')}</div><div>
+          <div class="nm">Maya <span>· your trip agent</span></div>
+          <p id="agentSay">${cur.say(S.trip)}</p></div></div>
+        <div class="railsteps">${OB.map((o,i)=>`
+          <button class="rstep ${i===st?'on':i<st?'done':''}" onclick="A.gotoStep(${i})">
+            <span class="dot">${i<st?ic2('check'):i+1}</span><span>${o.t}</span></button>`).join('')}</div>
+      </div>
+      <div class="panel" id="obPanel">${obStep(cur.k)}</div>
+    </div>
+  </div>`;
+  if(cur.k==='review')runFollowups();
+}
+function obStep(k){
+  const t=S.trip;
+  const originChips=['Delhi','Mumbai','Bengaluru','Ahmedabad'],destChips=['manali','goa','jaipur','bali','tokyo','kerala','ladakh'];
+  switch(k){
+  case 'basics':return `<h2>The essentials.</h2><p class="lead">Where you start, where you’re headed, and how many of you are going.</p>
+    <div class="field"><label>Starting from</label><input id="f_origin" value="${esc(t.origin)}" placeholder="City — e.g. Delhi" oninput="A.upd('trip.origin',this.value)">
+      <div class="chiprow" style="margin-top:10px">${originChips.map(c=>`<button class="chip ${t.origin===c?'on':''}" onclick="A.qfill('origin','${c}')">${c}</button>`).join('')}</div></div>
+    <div class="field"><label>Destination(s)</label>
+      <div class="chiprow">${t.destinations.map((d,i)=>`<span class="chip on">${esc(d)} <button onclick="A.rmDest(${i})" style="display:flex">${ic2('x')}</button></span>`).join('')||'<span class="hint" style="margin:0">No destination yet</span>'}</div>
+      <div style="display:flex;gap:10px;margin-top:12px"><input id="f_dest" placeholder="Type a place, or pick below" onkeydown="if(event.key==='Enter'){A.addDest();return false}">
+      <button class="btn btn-ghost btn-sm" onclick="A.addDest()">${ic2('plus')} Add</button></div>
+      <div class="chiprow" style="margin-top:10px">${destChips.map(c=>`<button class="chip" onclick="A.qfillDest('${c}')">${DEST[c].name}</button>`).join('')}</div>
+      <p class="hint">${ic2('info')} Multi-city routes arrive in Phase 3 — for now I plan around your main destination.</p></div>
+    <div class="two">
+      <div class="field"><label>Departure date</label><input type="date" min="${today()}" value="${t.depDate}" onchange="A.upd('trip.depDate',this.value)"></div>
+      <div class="field"><label>Return date</label><input type="date" min="${t.depDate||today()}" value="${t.retDate}" onchange="A.upd('trip.retDate',this.value)">
+      ${tripDays()>=1?`<p class="hint">${tripNights()} nights · ${tripDays()+1>tripDays()?tripDays()===1?'':'':''}${tripDays()}+1 trip length: <b>${tripDays()} nights · ${tripDays()+1} days</b></p>`:''}</div></div>
+    <div class="field"><label>Departure time preference</label><div class="seg">
+      ${['early','morning','afternoon','evening','any'].map(x=>`<button class="${t.timePref===x?'on':''}" onclick="A.seg('trip.timePref','${x}')">${x==='any'?'No preference':x[0].toUpperCase()+x.slice(1)}</button>`).join('')}</div></div>
+    <div class="field"><label>Travellers</label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div class="stepper"><button onclick="A.step2('adults',-1)" aria-label="Fewer adults">${ic2('minus')}</button><b>${t.adults}</b><button onclick="A.step2('adults',1)">${ic2('plus')}</button></div><span class="hint" style="align-self:center">adults</span>
+        <div class="stepper"><button onclick="A.step2('children',-1)">${ic2('minus')}</button><b>${t.children}</b><button onclick="A.step2('children',1)">${ic2('plus')}</button></div><span class="hint" style="align-self:center">children</span></div></div>
+    ${obActions()}`;
+  case 'budget':{const quick={INR:[25000,50000,75000,150000],USD:[1000,2500,5000],EUR:[1000,2500,5000],GBP:[1000,2500,5000]}[t.currency]||[1000,3000,6000];
+    const SC=[['transport','Getting there & back','plane'],['stay','Stays','bed'],['food','Food','utensils'],['activities','Activities & entries','ticket'],['local','Local transport','route']];
+    return `<h2>What’s your total trip budget?</h2><p class="lead">One number. I’ll tell you honestly if the plan fits — and what to trim if it doesn’t.</p>
+    <div class="field"><label>Currency</label><div class="chiprow">${CURRENCIES.map(c=>`<button class="chip ${t.currency===c[0]?'on':''}" onclick="A.setCur('${c[0]}')">${c[1].split(' · ')[0]}</button>`).join('')}</div></div>
+    <div class="field"><label>Amount</label><div class="bigAmt"><span>${SYM[t.currency]}</span><input id="f_amt" inputmode="numeric" value="${t.amount}" oninput="A.upd('trip.amount',this.value.replace(/[^\\d]/g,''))"></div>
+      <div class="chiprow" style="margin-top:12px">${quick.map(q=>`<button class="chip" onclick="A.qfill('amount',${q})">${fmt(q)}</button>`).join('')}</div></div>
+    <div class="field"><label>What does this budget include?</label>
+      <div class="chiprow" id="scopeRow">${SC.map(s=>`<button class="chip ${t.scope[s[0]]?'on':''}" data-scope="${s[0]}" onclick="A.toggleScope('${s[0]}')">${ic2(s[2])} ${s[1]}</button>`).join('')}</div>
+      <p class="hint">Tap to toggle — I only count what’s inside the circle when checking your budget.</p></div>
+    ${obActions()}`}
+  case 'transport':return `<h2>How do you like to move?</h2><p class="lead">Modes and priorities — I’ll weigh them against price and time.</p>
+    <div class="field"><label>Modes</label><div class="stepcard">
+      ${[['flight','plane','Flight'],['train','train','Train'],['bus','bus','Bus'],['car','car','Car'],['taxi','taxi','Taxi']].map(m=>`
+      <button class="selcard ${t.transport.modes.includes(m[0])?'on':''}" onclick="A.toggleMode('${m[0]}')"><span class="ic">${ic2(m[1])}</span><b>${m[2]}</b><small>${{flight:'Fast over long legs',train:'Scenic & steady',bus:'The cheap overland',car:'Freedom & stops',taxi:'Door to door'}[m[0]]}</small></button>`).join('')}
+      <button class="selcard ${!t.transport.modes.length?'on':''}" onclick="A.set('trip.transport.modes',[])"><span class="ic">${ic2('spark')}</span><b>No preference</b><small>You surprise me</small></button></div></div>
+    <div class="field"><label>Priority</label><div class="seg">
+      ${['cheapest','fastest','best value','most comfortable','direct preferred'].map(p=>`<button class="${t.transport.priority===p?'on':''}" onclick="A.seg('trip.transport.priority','${p}')">${p[0].toUpperCase()+p.slice(1)}</button>`).join('')}</div></div>
+    ${obActions()}`;
+  case 'stay':return `<h2>Where should you sleep?</h2><p class="lead">Style, minimum rating and the little things that matter.</p>
+    <div class="field"><label>Type</label><div class="stepcard">
+      ${[['hotel','bed','Hotel','Private, serviced, easy'],['hostel','users','Hostel','Cheap & social'],['homestay','heart','Homestay','Hosts & home food'],['resort','sun','Resort','Pools & doing nothing'],['apartment','camera','Apartment','Space & a kitchen'],['no-pref','spark','No preference','Best match wins']].map(h=>`
+      <button class="selcard ${t.stay.type===h[0]?'on':''}" onclick="A.seg('trip.stay.type','${h[0]}')"><span class="ic">${ic2(h[1])}</span><b>${h[2]}</b><small>${h[3]}</small></button>`).join('')}</div></div>
+    <div class="two">
+      <div class="field"><label>Minimum rating</label><div class="rangeval" id="rtLabel">${t.stay.minRating.toFixed(1)}+ </div>
+        <input type="range" min="3" max="4.8" step="0.1" value="${t.stay.minRating}" oninput="A.upd('trip.stay.minRating',+this.value);document.getElementById('rtLabel').textContent=(+this.value).toFixed(1)+'+'"></div>
+      <div class="field"><label>Max nightly price <span style="text-transform:none;font-weight:500;color:var(--mut)">(optional)</span></label>
+        <input inputmode="numeric" value="${t.stay.maxNight}" placeholder="Any" oninput="A.upd('trip.stay.maxNight',this.value.replace(/[^\\d]/g,''))"></div></div>
+    <div class="field"><label>Preferred area</label><input value="${esc(t.stay.area)}" placeholder="e.g. Near Old Manali bridge" oninput="A.upd('trip.stay.area',this.value)"></div>
+    <div class="field"><label>Must-haves</label><div class="chiprow">
+      ${['Breakfast','Wi-Fi','Parking','Pool','Family rooms'].map(a=>`<button class="chip ${t.stay.amen.includes(a)?'on':''}" onclick="A.toggleAmen('${a}')">${ic2({Breakfast:'coffee','Wi-Fi':'wifi',Parking:'parking',Pool:'waves','Family rooms':'users'}[a])} ${a}</button>`).join('')}</div></div>
+    ${obActions()}`;
+  case 'food':return `<h2>How do you eat?</h2><p class="lead">Diet, allergies and the cuisines you’ll cross a city for.</p>
+    <div class="field"><label>Diet</label><div class="seg">
+      ${[['veg','Vegetarian'],['vegan','Vegan'],['jain','Jain'],['nonveg','Non-vegetarian'],['none','No preference']].map(d=>`<button class="${t.food.diet===d[0]?'on':''}" onclick="A.seg('trip.food.diet','${d[0]}')">${d[1]}</button>`).join('')}</div></div>
+    <div class="field"><label>Allergies & restrictions</label>
+      <div class="chiprow">${t.food.allergies.map((a,i)=>`<span class="chip on">${esc(a)} <button onclick="A.rmArr('trip.food.allergies',${i})" style="display:flex">${ic2('x')}</button></span>`).join('')||'<span class="hint" style="margin:0">None added</span>'}</div>
+      <div style="display:flex;gap:10px;margin-top:12px"><input id="f_alg" placeholder="Add and press Enter" onkeydown="if(event.key==='Enter'){A.addArr('trip.food.allergies','f_alg');return false}">
+      <button class="btn btn-ghost btn-sm" onclick="A.addArr('trip.food.allergies','f_alg')">${ic2('plus')}</button></div>
+      <div class="chiprow" style="margin-top:10px">${['Nuts','Dairy','Gluten','Seafood','Egg'].map(a=>`<button class="chip" onclick="A.pushArr('trip.food.allergies','${a}')">${a}</button>`).join('')}</div></div>
+    <div class="field"><label>Preferred cuisines</label>
+      <div class="chiprow">${CUISINES.map(c=>`<button class="chip ${t.food.cuisines.includes(c)?'on':''}" onclick="A.toggleArr('trip.food.cuisines','${c}')">${c}</button>`).join('')}</div>
+      <div style="display:flex;gap:10px;margin-top:12px"><input id="f_cui" placeholder="Add your own cuisine" onkeydown="if(event.key==='Enter'){A.addArr('trip.food.cuisines','f_cui');return false}">
+      <button class="btn btn-ghost btn-sm" onclick="A.addArr('trip.food.cuisines','f_cui')">${ic2('plus')}</button></div></div>
+    ${obActions()}`;
+  case 'interests':{const n=t.interests.length+t.customInterests.length;return `<h2>What do you love doing?</h2><p class="lead">I optimise the itinerary around these — pick at least three.</p>
+    <div class="field"><div class="chiprow">${INTERESTS.map(i=>`<button class="chip ${t.interests.includes(i[0])?'on':''}" onclick="A.toggleArr('trip.interests','${i[0]}')">${ic2(i[1])} ${i[0][0].toUpperCase()+i[0].slice(1)}</button>`).join('')}</div>
+      ${t.customInterests.length?`<div class="chiprow" style="margin-top:10px">${t.customInterests.map((c,i)=>`<span class="chip on">${esc(c)} <button onclick="A.rmArr('trip.customInterests',${i})" style="display:flex">${ic2('x')}</button></span>`).join('')}</div>`:''}
+      <div style="display:flex;gap:10px;margin-top:14px"><input id="f_int" placeholder="Anything else? e.g. stargazing" onkeydown="if(event.key==='Enter'){A.addArr('trip.customInterests','f_int');return false}">
+      <button class="btn btn-ghost btn-sm" onclick="A.addArr('trip.customInterests','f_int')">${ic2('plus')}</button></div>
+      <p class="hint" style="margin-top:12px"><b style="color:${n>=3?'var(--ok)':'var(--flame)'}">${n} picked</b>${n<3?' — at least 3 gives the optimiser something to work with.':' — great spread.'}</p></div>
+    ${obActions()}`}
+  case 'style':return `<h2>What’s your travel style?</h2><p class="lead">One overall tune, plus anything I should watch out for.</p>
+    <div class="field"><div class="stepcard">${STYLES.map(s=>`
+      <button class="selcard ${t.style===s[0]?'on':''}" onclick="A.seg('trip.style','${s[0]}')"><span class="ic">${ic2(s[1])}</span><b>${s[0][0].toUpperCase()+s[0].slice(1)}</b><small>${s[2]}</small></button>`).join('')}</div></div>
+    <div class="field"><label>Special requirements</label><div class="chiprow">
+      ${NEEDS.map(n=>`<button class="chip ${t.needs.includes(n)?'on':''}" onclick="A.toggleArr('trip.needs','${n}')">${n}</button>`).join('')}</div></div>
+    <div class="two">
+      <div class="field"><label>Preferred check-in time</label><select onchange="A.upd('trip.checkin',this.value)">
+        ${['any','12:00','13:00','14:00','15:00'].map(c=>`<option ${t.checkin===c?'selected':''}>${c==='any'?'Anytime':c}</option>`).join('')}</select></div>
+      <div class="field"><label>Other notes</label><input value="${esc(t.notes)}" placeholder="Anything at all" oninput="A.upd('trip.notes',this.value)"></div></div>
+    ${obActions()}`;
+  case 'review':return `<h2>Everything look right?</h2><p class="lead">This is the brief I’ll research against. Edit anything before we start.</p>
+    <div class="sumwrap">
+      <div class="sumtop">${S.trip.destinations[0]&&DEST[keyFor(S.trip.destinations[0])]?scene(DEST[keyFor(S.trip.destinations[0])].scene,DEST[keyFor(S.trip.destinations[0])].pal,'summary',640,340):scene('mountain','alpine','summary',640,340)}
+        <div class="ov"></div>
+        <div class="route"><b>${esc(t.origin.toUpperCase()||'—')}</b><span class="ln"></span>${ic2('plane')}<span class="ln"></span><b>${esc((t.destinations[0]||'—').toUpperCase())}</b></div></div>
+      <div class="sumbody">
+        <div class="sumgrid">
+          <div><div class="k">Dates</div><div class="v">${t.depDate?fmtD(t.depDate):'—'} → ${t.retDate?fmtD(t.retDate):'—'}</div></div>
+          <div><div class="k">Length</div><div class="v">${tripNights()} nights · ${tripDays()+1||0} days</div></div>
+          <div><div class="k">Travellers</div><div class="v">${t.adults} adults${t.children?` · ${t.children} children`:''}</div></div>
+          <div><div class="k">Budget</div><div class="v">${t.amount?fmt(+t.amount):'—'}</div></div>
+          <div><div class="k">Travel style</div><div class="v" style="text-transform:capitalize">${t.style}</div></div>
+          <div><div class="k">Food</div><div class="v" style="display:flex;gap:8px;align-items:center">${dietBadge(t.food.diet)}${t.food.allergies.length?`<span style="font-size:12px;color:var(--mut)">no ${t.food.allergies.slice(0,2).join(', ').toLowerCase()}</span>`:''}</div></div>
+        </div>
+        <div class="k" style="font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--mut);margin-bottom:6px">Interests</div>
+        <div class="dotline">${t.interests.map(i=>`<span style="text-transform:capitalize">${i}</span>`).concat(t.customInterests).join('<i>·</i>')||'<span style="color:var(--mut)">none picked</span>'}</div>
+        <div id="fuZone" style="margin-top:26px;display:flex;flex-direction:column;gap:10px"></div>
+      </div></div>
+    <div class="ob-actions"><button class="btn btn-ghost" onclick="A.gotoStep(0)">${ic2('back')} Edit trip</button>
+      <button class="btn btn-flame" onclick="A.startResearch()">Start research ${ic2('arrow')}</button></div>`;
+  }
+}
+function obActions(){return `<div class="ob-actions">
+  <button class="btn btn-ghost" onclick="A.obBack()">${ic2('back')} ${S.step===0?'Cancel':'Back'}</button>
+  <button class="btn btn-ink" onclick="A.obNext()">Continue ${ic2('arrow')}</button></div>`}
+
+/* conversational follow-ups (section 3 of the brief) */
+let fuState={askedScope:false,askedDiet:false,done:false};
+async function runFollowups(){
+  fuState={askedScope:!S.scopeTouched,askedDiet:false,done:false};
+  const zone=$('#fuZone');if(!zone)return;
+  await sleep(500);
+  if(!S.scopeTouched){await mayaAsk(zone,'Quick one — does your '+fmt(+S.trip.amount||0)+' budget include transportation, accommodation, food and activities?',
+    [['Yes — everything',()=>{S.scopeTouched=true;Object.keys(S.trip.scope).forEach(k=>S.trip.scope[k]=true);mayaSaid('Perfect, I’ll count all of it.')}],
+     ['No — travel is separate',()=>{S.scopeTouched=true;S.trip.scope.transport=false;S.trip.scope.local=false;mayaSaid('Got it — I’ll budget stays, food and activities inside '+fmt(+S.trip.amount||0)+'.')}],
+     ['Let me set it',()=>{S.scopeTouched=true;mayaSaid('Tap the toggles on this card to adjust what counts.');openModal(`<div style="padding:28px"><h3 class="fd" style="font-size:24px;margin-bottom:16px">What’s inside the budget?</h3><div class="chiprow">${[['transport','Transportation'],['stay','Accommodation'],['food','Food'],['activities','Activities'],['local','Local transport']].map(s=>`<button class="chip ${S.trip.scope[s[0]]?'on':''}" onclick="A.toggleScope('${s[0]}');this.classList.toggle('on')">${s[1]}</button>`).join('')}</div><p class="hint" style="margin-top:14px">Close this dialog when done — the summary remembers.</p></div>`)}]]);
+    if(fuState.done)return}
+  const foodish=S.trip.food.diet==='none'&&(S.trip.interests.includes('food')||S.trip.interests.includes('culture'));
+  if(foodish){await mayaAsk(zone,'Since food experiences matter to you — any dietary needs I should plan meals around?',
+    [['No restrictions',()=>{S.trip.food.diet='none';mayaSaid('Easy — everything on the table.')}],
+     ['Vegetarian',()=>{S.trip.food.diet='veg';mayaSaid('Noted — every meal suggestion will suit vegetarians.')}],
+     ['Vegan',()=>{S.trip.food.diet='vegan';mayaSaid('Noted — vegan-friendly tables only.')}],
+     ['Jain',()=>{S.trip.food.diet='jain';mayaSaid('Noted — Jain-suitable options prioritised.')}]])}
+  mayaSaid('That’s everything I need. Hit “Start research” when ready.');
+  fuState.done=true;
+}
+async function mayaAsk(zone,q,opts){
+  const t1=document.createElement('div');t1.className='typing';t1.innerHTML='<i></i><i></i><i></i>';zone.appendChild(t1);zone.scrollIntoView({behavior:'smooth',block:'nearest'});await sleep(900);t1.remove();
+  const b=document.createElement('div');b.className='bubble agent';b.textContent=q;zone.appendChild(b);await sleep(350);
+  const r=document.createElement('div');r.className='qreplies';
+  opts.forEach(o=>{const bt=document.createElement('button');bt.className='qr';bt.textContent=o[0];
+    bt.onclick=()=>{r.remove();const u=document.createElement('div');u.className='bubble user';u.textContent=o[0];zone.appendChild(u);o[1]()};r.appendChild(bt)});
+  zone.appendChild(r);await sleep(1200);
+}
+async function mayaSaid(txt){const zone=$('#fuZone');if(!zone)return;
+  const t1=document.createElement('div');t1.className='typing';t1.innerHTML='<i></i><i></i><i></i>';zone.appendChild(t1);await sleep(800);t1.remove();
+  const b=document.createElement('div');b.className='bubble agent';b.textContent=txt;zone.appendChild(b)}
+
+/* =========================================================
+   RESEARCH SEQUENCE
+   ========================================================= */
+const RSTEPS=[
+ ['Understanding your trip',null],
+ ['Searching transportation',null],
+ ['Comparing accommodation',null],
+ ['Finding restaurants',null],
+ ['Discovering activities',null],
+ ['Calculating distances & routes',null],
+ ['Optimizing your itinerary',null]];
+function keyFor(name){const n=(name||'').toLowerCase().trim();return Object.keys(DEST).find(k=>n===k||n===DEST[k].name.toLowerCase())||null}
+function destProfile(){const k=keyFor(S.trip.destinations[0]);return k?DEST[k]:synth(S.trip.destinations[0]||'Somewhere')}
+async function startResearch(){
+
+  try {
+    const response = await fetch("https://paying-monotype-curled.ngrok-free.dev/api/trip", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(S.trip)
+    });
+
+    const data = await response.json();
+
+    console.log("Voyara backend response:", data);
+
+  } catch (error) {
+    console.error("Voyara backend error:", error);
+    toast("Could not connect to Voyara backend", "x");
+  }
+
+  const prof=destProfile();
+  P.prof=prof;
+  P.checkedAt={};
+  S.screen='research';stopHeroCycle();
+  $('#app').innerHTML=`<div class="research">
+    <span class="overline">Researching</span>
+    <h2>Building your ${esc(prof.name)} plan</h2>
+    <p class="rsub">${esc(S.trip.origin||'Origin')} → ${esc(prof.name)} · every step below completes only when its data “arrives”.</p>
+    <div class="routewrap"><svg viewBox="0 0 680 130">
+      <path id="rpath" d="M40 100 Q 340 -30 640 100" fill="none" stroke="rgba(246,238,220,.28)" stroke-width="2" stroke-dasharray="1" pathLength="1" style="animation:drawA 2.4s ease forwards"/>
+      <circle r="5.5" fill="#DE9A2E"><animateMotion dur="3.2s" repeatCount="indefinite"><mpath href="#rpath"/></animateMotion></circle>
+      <circle cx="40" cy="100" r="6" fill="#E4572E"/><circle cx="640" cy="100" r="6" fill="#0E7C6B"/>
+      <text x="40" y="122" fill="#F6EEDC" font-size="13" font-family="Outfit" font-weight="600">${esc((S.trip.origin||'—').toUpperCase())}</text>
+      <text x="640" y="122" fill="#F6EEDC" font-size="13" font-family="Outfit" font-weight="600" text-anchor="end">${esc(prof.name.toUpperCase())}</text>
+    </svg></div>
+    <div class="rsteps">${RSTEPS.map((s,i)=>`<div class="rstep" id="rs${i}"><span class="rmark" id="rm${i}"></span><div><h4>${s[0]}</h4><div class="rsub2" id="rb${i}"></div></div></div>`).join('')}</div>
+    <div class="rnote">${ic2('info')} <span><b>Demo mode.</b> Results below are simulated placeholder data — in live mode each step completes only after a real source responds.</span></div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:20px;border-color:rgba(246,238,220,.4);color:var(--cream)" onclick="A.skipResearch()">Skip animation (demo)</button>
+  </div>`;
+  const mark=(i,html)=>{$(`#rm${i}`).innerHTML=html};
+  const sub=(i,lines)=>{const b=$(`#rb${i}`);b.innerHTML=lines.map(l=>`<span>${ic2('check')}${esc(l)}</span>`).join('')};
+  const skippable=id=>new Promise(res=>{const iv=setTimeout(res,id);S._skip=()=>{clearTimeout(iv);res()}});
+  const F=[
+    ()=>{P.pax=S.trip.adults+S.trip.children;P.rooms=Math.ceil(S.trip.adults/2)+(S.trip.children?1:0);P.budgetINR=(+S.trip.amount||0)*RATE[S.trip.currency];P.days=Math.max(tripDays()+1,1);
+      return [`${esc(S.trip.origin)} → ${prof.name} · ${P.days} days planned`,`Budget ${fmt((+S.trip.amount||0)/RATE[S.trip.currency]*RATE[S.trip.currency])} · ${S.trip.style} style`,`Interests: ${[...S.trip.interests,...S.trip.customInterests].slice(0,4).join(', ')||'open'} · ${dietBadge(S.trip.food.diet).replace(/<[^>]*>/g,'')}`]},
+    ()=>{P.transport=prof.transport.map(t=>({...t,checkedAt:nowStamp()}));return [`${prof.transport.length} transport options across ${new Set(prof.transport.map(t=>t.src)).size} sources`,`Fares normalised to group totals · price-stamped ${nowStamp()}`]},
+    ()=>{P.hotels=prof.hotels.map(h=>({...h,checkedAt:nowStamp()}));const dupe=P.hotels.find(h=>h.alt);
+      P.dedupeNote=dupe?`Merged duplicate: “${dupe.name}” ↔ “${dupe.alt}” (matched on name + area)`:'No duplicates detected';
+      return [`${P.hotels.length} stays · duplicates normalised`,P.dedupeNote,`Availability cached at ${nowStamp()} — shown as “when checked”`]},
+    ()=>{P.restaurants=prof.restaurants.map(r2=>({...r2,checkedAt:nowStamp()}));const d=S.trip.food.diet;
+      const n=d==='none'||d==='any'?P.restaurants.length:P.restaurants.filter(r2=>{const diet=Array.isArray(r2.diet)?r2.diet:[];return diet.includes(d)||(diet.includes('nonveg')&&d==='nonveg')||(d!=='nonveg'&&diet.includes(d));}).length;
+      return [`${P.restaurants.length} tables found · ${n} match your ${d==='none'?'open':d} preference`,`Hours & price ranges pulled from map data at ${nowStamp()}`]},
+    ()=>{P.activities=prof.activities.map(a=>({...a,checkedAt:nowStamp()}));
+      const ints=[...S.trip.interests,...S.trip.customInterests];const m=P.activities.filter(a=>a.tags.some(t=>ints.includes(t))).length;
+      return [`${P.activities.length} experiences discovered · ${m} tagged to your interests`,`Opening hours & durations verified at ${nowStamp()}`]},
+    ()=>{const cs=prof.center;let far=0,farN='';prof.activities.forEach(a=>{const d=haversine(cs[0],cs[1],a.lat,a.lng);if(d>far){far=d;farN=a.name}});
+      return [`${prof.activities.length+P.hotels.length+P.restaurants.length} locations mapped around ${prof.name}`,`Longest hop: ${far.toFixed(1)} km — ${farN}`,`Road-time model: ~${Math.round(prof.road*60)} min per 20 km of mountain/urban road`]},
+    ()=>{computePlan(S.mode);const c=P.costs;return [`Best-fit set: ${P.sel.hotel.name} + ${P.sel.transport.title}`,`Estimated ${fmt(c.total)} against ${fmt(+S.trip.amount||0)} — ${c.total<=P.budgetINR?'within budget':'over budget'}`,`Itinerary: ${P.days} days · geo-grouped by area`]}];
+  for(let i=0;i<F.length;i++){
+    const row=$(`#rs${i}`);row.classList.add('active');mark(i,`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gold);animation:pulse 1.2s infinite"></span>`);
+    let lines=[];
+    try{
+      await skippable(600+i*120);
+      lines=F[i]();
+      for(const l of lines)await skippable(280);
+    }catch(err){
+      console.error('Voyara research step failed:',RSTEPS[i][0],err);
+      lines=[`Demo fallback used for this step`,`The planner recovered automatically`];
+    }
+    mark(i,ic2('check'));row.classList.remove('active');row.classList.add('done');sub(i,lines);P.checkedAt[RSTEPS[i][0]]=nowStamp();
+  }
+  await skippable(700);S._skip=null;S.researched=true;computePlan(S.mode);renderResults();
+}
+
+/* =========================================================
+   OPTIMIZER (demo computation on placeholder data)
+   ========================================================= */
+function computePlan(mode){
+  const prof=P.prof,t=S.trip;if(!prof)return;
+  P.days=P.days||Math.max(tripDays(),3);P.pax=t.adults+t.children;P.rooms=Math.ceil(t.adults/2)+(t.children?1:0);
+  P.mode=mode;
+  // transport pick
+  const wT={cheapest:{cheapest:3,value:2},comfort:{comfort:3,value:1},experience:{value:2,fastest:1},best:{value:3,cheapest:.5,comfort:.5}}[mode]||{value:2};
+  P.transport=P.transport.length?P.transport:prof.transport.map(x=>({...x,checkedAt:nowStamp()}));
+  const scoredT=P.transport.map(tr=>{let s=0;(tr.tags||[]).forEach(g=>s+=(wT[g]||0)*2);
+    if(t.transport.priority&&(tr.tags||[]).includes(t.transport.priority))s+=2.5;
+    if(t.transport.modes.length&&!t.transport.modes.includes(tr.mode)&&!(tr.tags||[]).includes('mixed'))s-=4;
+    s-=(tr.price/Math.max(P.budgetINR,1))*8;return{tr,s}}).sort((a,b)=>b.s-a.s);
+  if(!scoredT.length)return;
+  P.sel={transport:scoredT[0].tr};
+  // hotel pick
+  let cands=P.hotels.length?P.hotels:prof.hotels.map(x=>({...x,checkedAt:nowStamp()}));
+  if(t.stay.type!=='no-pref'){const f=cands.filter(h=>h.type===t.stay.type);if(f.length)cands=f}
+  cands=cands.filter(h=>h.rating>=t.stay.minRating);if(!cands.length)cands=P.hotels;
+  const scoredH=cands.map(h=>{let s=h.rating*2+h.amen.filter(a=>t.stay.amen.includes(a)).length*.5;
+    if(mode==='cheapest')s-=h.price/1400;if(mode==='comfort')s+=h.price/2600;if(mode==='experience')s+=h.amen.some(a=>/view|Spa|Pool|Heritage|Beachfront|Rooftop/i.test(a))?1.2:0;
+    return{h,s}}).sort((a,b)=>b.s-a.s);
+  if(!scoredH.length)return;
+  P.sel.hotel=scoredH[0].h;
+  P.itin=buildItinerary(mode);
+  // costs
+  const d=P.days;
+  const cTrans=P.sel.transport.price;
+  const cStay=P.sel.hotel.price*d*P.rooms;
+  let cFood=0,cActs=0;
+  P.itin.forEach(day=>day.blocks.forEach(b=>{
+    if(b.kind==='meal'&&b.ref)cFood+=(b.ref.pp||0)*P.pax;
+    if(b.kind==='act'&&b.ref)cActs+=(b.ref.cost||0)*P.pax*(b.ref.perPp===false?1:1)}));
+  const cLocal=Math.round(prof.base?.local?prof.base.local*P.pax*d:(220*P.pax*d));
+  const sub2=cTrans+cStay+cFood+cActs+cLocal;
+  const bufPct=S._bufPct??10;const cBuf=Math.round(sub2*bufPct/100);
+  P.costs={transport:cTrans,stay:cStay,food:cFood,activities:cActs,local:cLocal,buffer:cBuf,bufPct};
+  const sc=S.trip.scope;
+  P.costs.total=(sc.transport?cTrans:0)+(sc.stay?cStay:0)+(sc.food?cFood:0)+(sc.activities?cActs:0)+(sc.local?cLocal:0)+cBuf;
+}
+function haversineKm(a,b){if(!a||!b)return 0;return haversine(a[0],a[1],b[0],b[1])}
+function pickAct(cands,used,slot){
+  let pool=cands.filter(a=>!used.has(a.id));
+  if(!pool.length)pool=cands;
+  const ints=[...S.trip.interests,...S.trip.customInterests];
+  const score=a=>{let s=a.rate*2+((a.tags||[a.tag]).some(t=>ints.includes(t))?3:0);
+    if(slot.tag&&(a.tags||[a.tag]).includes(slot.tag))s+=2.5;
+    if(P.mode==='cheapest')s-=(a.cost/600);if(P.mode==='comfort')s-=(a.tags||[]).includes('adventure')?1.5:0;if(P.mode==='experience')s+=((a.tags||[a.tag]).some(t=>ints.includes(t))?2:0);
+    return s};
+  return pool.sort((a,b)=>score(b)-score(a))[0];
+}
+function pickEat(cands,area,meal){
+  const d=S.trip.food.diet;let pool=cands.filter(r2=>{const diet=Array.isArray(r2.diet)?r2.diet:[];return d==='none'||d==='any'||diet.includes(d)||(d!=='nonveg'&&diet.includes(d));});
+  if(!pool.length)pool=cands;
+  const inArea=pool.filter(r2=>r2.area===area);if(inArea.length&&meal!=='B')pool=inArea.concat(pool.filter(r2=>r2.area!==area));
+  return pool[0];
+}
+function buildItinerary(mode){
+  const prof=P.prof,t=S.trip;
+  const areaOf=a=>a.area;
+  const used=new Set();
+  const all=[...(P.activities.length?P.activities:prof.activities)];
+  const eats=[...(P.restaurants.length?P.restaurants:prof.restaurants)];
+  const relaxed=S.flags.relaxed;
+  const first={name:'Arrival & first look',area:null,slots:[{k:'arrive'},{k:'transfer'},{k:'checkin'},{k:'meal',m:'L'},{k:'act',tag:'local'},{k:'meal',m:'D'},{k:'act',tag:'nightlife',opt:true}]};
+  const last={name:'Departure & markets',area:null,slots:[{k:'meal',m:'B'},{k:'act',tag:'shopping'},{k:'checkout'},{k:'depart'}]};
+  const mids=(prof.dayTpls||[]).slice();
+  const midN=P.days-2;const chosen=[];
+  for(let i=0;i<midN;i++)chosen.push(mids.length?mids[i%mids.length]:{name:prof.dayNames[(i+1)%prof.dayNames.length]||'Explore',area:null,slots:[{k:'meal',m:'B'},{k:'act',tag:'nature'},{k:'meal',m:'L'},{k:'act',tag:'local'},{k:'meal',m:'D'}]});
+  const defs=[first,...chosen,last];
+  const days=defs.map((def,di)=>{
+    const blocks=[];let prev=null;const usedActs=[];
+    const push=(o)=>{blocks.push(o)};
+    const mkAct=(slot,time)=>{
+      let cands=all.filter(a=>a.area===(slot.area||def.area));
+      if(!cands.length)cands=all;
+      const a=pickAct(cands,used,slot);if(!a)return;used.add(a.id);usedActs.push(a);
+      const km=prev?haversine(prev,[a.lat,a.lng]):0;prev=[a.lat,a.lng];
+      push({time,kind:'act',title:a.name,ref:a,km,travel:km>0.15?Math.max(6,Math.round(km*prof.road+8)):0})};
+    const mkMeal=(m,slot)=>{
+      const area=slot.area||def.area||eats[0].area;
+      const r2=pickEat(eats,area,m);if(!r2)return;const c={old:new Date().getTimezoneOffset()};
+      let latlng=null;if(P.sel.hotel)latlng=[P.sel.hotel.lat,P.sel.hotel.lng];
+      const anchor=prev||latlng||prof.center;
+      const km=haversine(anchor[0],anchor[1],r2.lat,r2.lng);prev=[r2.lat,r2.lng];
+      push({time:m==='B'?'08:00':m==='L'?'13:00':'20:00',kind:'meal',title:r2.name,ref:r2,m,km,travel:km>0.15?Math.max(5,Math.round(km*prof.road+6)):0})};
+    let arr='10:00';
+    if(def.slots[0].k==='arrive'){arr=P.sel.transport.arr.split(' ')[0];prev=[P.sel.hotel.lat,P.sel.hotel.lng]}
+    def.slots.forEach(slot=>{
+      if(slot.opt&&(relaxed||mode==='comfort'&&slot.tag==='nightlife'))return;
+      if(relaxed&&(slot.tag==='nightlife'||slot.tag==='photography'))return;
+      switch(slot.k){
+        case 'arrive':push({time:arr,kind:'arrive',title:'Arrive in '+prof.name,ref:P.sel.transport,km:0,travel:0});break;
+        case 'transfer':push({time:addMin(arr,45),kind:'travel',title:'Transfer to '+P.sel.hotel.area,ref:null,km:P.sel.transport.mode==='flight'?47:0,travel:P.sel.transport.mode==='flight'?95:30});break;
+        case 'checkin':push({time:addMin(arr,105),kind:'checkin',title:'Check-in · '+P.sel.hotel.name,ref:P.sel.hotel,km:0,travel:0});break;
+        case 'meal':mkMeal(slot.m,slot);break;
+        case 'act':mkAct(slot,slot.t||addMin(arr,210));break;
+        case 'free':push({time:slot.t||'16:00',kind:'free',title:'Free time',ref:null,km:0,travel:0,note:slot.note||'Space to wander — the best hours are unplanned'});break;
+        case 'checkout':push({time:'10:00',kind:'checkin',title:'Check-out · luggage storage',ref:P.sel.hotel,km:0,travel:0});break;
+        case 'depart':push({time:'14:00',kind:'arrive',title:'Depart for '+(S.trip.origin||'home'),ref:P.sel.transport,km:0,travel:0});break}});
+    (S.extras.filter(e=>e.day===di)).forEach(e=>{const a=all.find(x=>x.id===e.id);if(a)push({time:'16:30',kind:'act',title:a.name,ref:a,km:prev?haversine(prev,[a.lat,a.lng]):0,travel:8,extra:true})});
+    blocks.sort((a,b)=>a.time.localeCompare(b.time));
+    const actKm=blocks.reduce((s,b)=>s+(b.km||0),0);
+    return {name:def.name||prof.dayNames[di]||('Day '+(di+1)),blocks,totalKm:Math.round(actKm*10)/10,usedActs};
+  });
+  return days;
+}
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+function renderResults(){
+  S.screen='results';stopHeroCycle();
+  const prof=P.prof,t=S.trip;
+  $('#app').innerHTML=`
+  <div class="demostrip">${ic2('shield')} Phase 1 preview — prices, availability &amp; reviews below are <u>simulated demo data</u>, not live research. Live sources connect in Phase 2.</div>
+  <div class="rnav"><div class="wrap">
+    <div class="logo">${ic2('compass')} Voyara</div>
+    <div class="rtrip">${ic2('pin')} ${esc((t.origin||'—').toUpperCase())} → ${esc(prof.name.toUpperCase())} · ${t.depDate?fmtD(t.depDate):'—'}–${t.retDate?fmtD(t.retDate):'—'}</div>
+    <div class="rtabs" id="rtabs">${[['overview','Overview'],['itinerary','Itinerary'],['map','Map'],['stay','Stay'],['transport','Getting there'],['eat','Eat'],['budget','Budget']].map((x,i)=>`<button class="${i===0?'on':''}" onclick="A.goSec('${x[0]}',this)">${x[1]}</button>`).join('')}</div>
+    <div class="sp" style="flex:1"></div>
+    <div class="modeswitch">${[['cheapest','wallet','Cheapest'],['best','scale','Value'],['comfort','bed','Comfort'],['experience','spark','Experience']].map(m=>`<button class="${S.mode===m[0]?'on':''}" onclick="A.setMode('${m[0]}')">${ic2(m[1])}<span>${m[2]}</span></button>`).join('')}</div>
+  </div></div>
+  <section id="sec-overview" class="rhero">
+    <div id="rheroArt" style="position:absolute;inset:0">${scene(prof.scene,prof.pal,'resulthero',900,640)}</div><div class="ov"></div>
+    <div class="wrap">
+      <span class="overline" style="color:var(--gold)">Your plan · optimised for ${S.mode==='best'?'best value':S.mode}</span>
+      <h1 id="heroTitle">Your ${esc(prof.name)} adventure</h1>
+      <div class="dates">${t.depDate?fmtD(t.depDate,true):'Flexible dates'} ${t.retDate?'— '+fmtD(t.retDate,true):''}</div>
+      <div class="metas"><span>${Math.max(0,P.days-1)} nights · ${P.days} days</span><span>·</span><span>${P.pax} traveller${P.pax===1?'':'s'}${t.children?` (with children)`:''}</span><span>·</span><span style="text-transform:capitalize">${esc(t.style)} style</span></div>
+      <div class="meterbox" id="ovMeter"></div><div class="keypicks" id="keypicks"></div>
+    </div>
+  </section>
+  <section id="sec-itinerary" class="sect-r"><div class="wrap"><div class="shead"><div><span class="overline">Day by day</span><h2>The itinerary</h2></div><div class="r">Days are grouped by area so you’re never zig-zagging across ${esc(prof.name)}. Tap any block for the “why”.</div></div><div id="itnWrap"></div></div></section>
+  <section id="sec-map" class="sect-r alt"><div class="wrap"><div class="shead"><div><span class="overline">On the ground</span><h2>The map</h2></div><div class="r">Hotel, food, sights and each day’s route.</div></div><div class="mapwrap"><div id="mapEl"></div><div class="maplegend"><span><i style="background:var(--teal)"></i> Your stay</span><span><i style="background:var(--flame)"></i> Attractions</span><span><i style="background:var(--gold)"></i> Food</span><span><i style="background:var(--sky)"></i> Transport</span></div><div class="daytoggles" id="dayToggles"></div></div></div></section>
+  <section id="sec-stay" class="sect-r"><div class="wrap"><div class="shead"><div><span class="overline">Sleep</span><h2>Stays, compared</h2></div><div class="r">Every price is “when checked”. Switching your stay recalculates the whole budget.</div></div><div class="hrow" id="stayWrap"></div></div></section>
+  <section id="sec-transport" class="sect-r alt"><div class="wrap"><div class="shead"><div><span class="overline">Getting there &amp; back</span><h2>Transport options</h2></div><div class="r">Group totals for ${P.pax} traveller${P.pax>1?'s':''}.</div></div><div class="filters" id="tFilters"></div><div id="tranWrap"></div></div></section>
+  <section id="sec-eat" class="sect-r"><div class="wrap"><div class="shead"><div><span class="overline">The table</span><h2>Where you’ll eat</h2></div><div class="r">Matched to ${dietBadge(S.trip.food.diet)} preference.</div></div><div class="rcols" id="eatWrap"></div></div></section>
+  <section id="sec-budget" class="sect-r alt"><div class="wrap"><div class="budgetsec" id="budWrap"></div><div class="ainfo">${ic2('info')}<span>Prices are simulated and stamped with the time they were “checked”.</span></div></div></section>
+  <div id="assistHost"></div>`;
+  paintResults();
+}
+
+function money(v){return fmt(Math.max(0,Number(v)||0));}
+function sceneFor(kind,item){return scene(kind||'mountain',profPal(),item?.id||'item',520,260);}
+function profPal(){return P.prof?.pal||'alpine';}
+function paintResults(){
+  const p=P.prof;
+  if(!p)return;
+  const c=P.costs||{};
+  const total=Number(c.total)||0,budget=P.budgetINR||0;
+  $('#ovMeter').innerHTML=`<div class="meter-top"><span class="big">${money(total)}</span><span class="status ${total<=budget?'ok':'over'}">${ic2(total<=budget?'check':'x')} ${budget?total<=budget?'Within budget':'Over budget':'No budget set'}</span></div><div class="meterbar"><i style="width:${budget?Math.min(100,total/budget*100):0}%"></i></div><div class="meter-foot"><span>${budget?money(total)+' planned':'Add a budget to compare'}</span><span>${budget?money(Math.max(0,budget-total))+' remaining':'Demo estimate'}</span></div>`;
+  $('#keypicks').innerHTML=`<div class="kpick" onclick="A.goSec('stay')">${ic2('bed')}<div><div class="k">Stay</div><div class="v">${esc(P.sel.hotel?.name||'Not selected')}</div></div></div><div class="kpick" onclick="A.goSec('transport')">${ic2('plane')}<div><div class="k">Getting there</div><div class="v">${esc(P.sel.transport?.title||'Not selected')}</div></div></div><div class="kpick" onclick="A.goSec('budget')">${ic2('wallet')}<div><div class="k">Total</div><div class="v">${money(total)}</div></div></div>`;
+  renderItinerary();renderStays();renderTransport();renderEat();renderBudget();renderMap();renderAssistant();
+}
+function renderItinerary(){
+  const wrap=$('#itnWrap'); if(!wrap)return;
+  wrap.innerHTML=P.itin.map((day,di)=>`<div class="daytitle"><h3>Day ${di+1} · ${esc(day.name)}</h3><span class="dstats">${day.blocks.length} stops · ${day.totalKm} km</span></div><div class="tl">${day.blocks.map((b,bi)=>`<div class="blk"><div class="blkhead" onclick="this.nextElementSibling.classList.toggle('hide')"><div class="blktime">${b.time}</div><div class="bico">${ic2(b.kind==='meal'?'utensils':b.kind==='act'?'compass':b.kind==='travel'?'car':'clock')}</div><div style="flex:1"><h4>${esc(b.title)}</h4><div class="bsub">${b.travel?`${b.travel} min travel · `:''}${b.ref?.area||b.note||''}</div></div><div class="blkchips">${b.ref?.cost!=null?`<span class="bchip">${money(b.ref.cost)}</span>`:''}${b.ref?.rate?`<span class="bchip free">★ ${b.ref.rate}</span>`:''}</div></div><div class="blkdetail hide"><p>${esc(b.ref?.blurb||b.ref?.note||b.note||'A practical stop selected to keep this day compact and aligned with your preferences.')}</p><div class="why"><b>Why this is here:</b> it fits the day’s area, your interests and the selected ${esc(S.mode)} travel mode.</div></div></div>`).join('')}</div>${di<P.itin.length-1?'<div class="gaprow"><span class="gline"></span>Next day</div>':''}`).join('');
+}
+function renderStays(){
+  const w=$('#stayWrap');if(!w)return;
+  w.innerHTML=(P.hotels.length?P.hotels:[]).map(h=>`<article class="hcard ${P.sel.hotel?.id===h.id?'picked':''}"><div class="art">${scene('hotel',pPal(h),h.id,520,280)}<span class="badge">${ic2('star')} ${h.rating.toFixed(1)}</span></div><div class="body"><h3>${esc(h.name)}</h3><div class="loc">${esc(h.area)} · ${esc(h.type)}</div><div class="rate">${ic2('star')} ${h.rating.toFixed(1)} <small>· ${h.rev.toLocaleString()} reviews</small></div><div class="amen">${(h.amen||[]).slice(0,5).map(x=>`<span>${esc(x)}</span>`).join('')}</div><div class="pricerow"><span class="p">${money(h.price)}</span><span class="per">/ night</span></div><div class="hbtns"><button class="btn btn-ghost" onclick="A.selectHotel('${h.id}')">${P.sel.hotel?.id===h.id?'Selected':'Choose stay'}</button></div></div></article>`).join('');
+}
+function pPal(){return profPal()}
+function renderTransport(){
+  const w=$('#tranWrap'),f=$('#tFilters');if(!w)return;
+  const modes=[...new Set(P.transport.map(x=>x.mode))];
+  f.innerHTML=modes.map(m=>`<button class="chip ${!S._tfilter||S._tfilter===m?'on':''}" onclick="A.filterTransport('${m}')">${m}</button>`).join('')+`<button class="chip ${!S._tfilter?'on':''}" onclick="A.filterTransport('')">All</button>`;
+  const list=P.transport.filter(x=>!S._tfilter||x.mode===S._tfilter);
+  w.innerHTML=list.map(tr=>`<div class="tcard ${P.sel.transport?.id===tr.id?'picked':''}"><div class="toprow"><h3>${ic2(tr.mode==='flight'?'plane':tr.mode==='train'?'train':tr.mode==='bus'?'bus':'car')}${esc(tr.title)}</h3><span class="pill">${money(tr.price)} total</span></div><div class="routeviz"><div class="pt"><b>${esc(tr.from)}</b><span>${esc(tr.dep)}</span></div><div class="mid">${esc(tr.dur||'')}<div class="bar"></div>${esc(tr.to)}</div><div class="pt"><b>${esc(tr.to)}</b><span>${esc(tr.arr)}</span></div></div><div class="tmeta"><span>${esc(tr.note||'')}</span><span>Source: ${esc(tr.src||'Demo')}</span><button class="btn btn-ghost btn-sm" onclick="A.selectTransport('${tr.id}')">${P.sel.transport?.id===tr.id?'Selected':'Choose'}</button></div></div>`).join('');
+}
+function renderEat(){
+  const w=$('#eatWrap');if(!w)return;
+  w.innerHTML=P.restaurants.map(r=>`<article class="rcard"><div class="art">${scene('food',profPal(),r.id,520,260)}</div><div class="body"><div style="display:flex;justify-content:space-between;gap:10px"><h3>${esc(r.name)}</h3>${dietBadge(r.diet?.includes(S.trip.food.diet)?S.trip.food.diet:(r.diet?.[0]||'any'))}</div><div class="loc">${esc(r.area)} · ${esc(r.cuisine)}</div><div class="rate">${ic2('star')} ${r.rate.toFixed(1)} <small>· ${r.rev.toLocaleString()} reviews</small></div><p class="hint">${esc(r.hrs)} · ${money(r.pp)} per person</p></div></article>`).join('');
+}
+function renderBudget(){
+  const w=$('#budWrap');if(!w)return;const c=P.costs||{};
+  const rows=[['transport','Getting there',c.transport],['stay','Stays',c.stay],['food','Food',c.food],['activities','Activities',c.activities],['local','Local transport',c.local],['buffer',`Buffer (${c.bufPct||10}%)`,c.buffer]];
+  w.innerHTML=`<div class="budtop"><div><span class="overline" style="color:var(--gold)">Budget</span><div class="budbig">${money(c.total)}</div><div class="budsub">${P.budgetINR?`${money(Math.max(0,P.budgetINR-c.total))} ${c.total<=P.budgetINR?'left':'over'} your budget`: 'No budget entered'}</div></div><div><div class="bar">${rows.map((r,i)=>`<i style="width:${c.total?Math.max(1,r[2]/c.total*100):0}%;background:${CATCOL[r[0]]||'#999'}"></i>`).join('')}</div>${rows.map(r=>`<div class="budrow">${ic2(r[0]==='transport'?'plane':r[0]==='stay'?'bed':r[0]==='food'?'utensils':r[0]==='activities'?'ticket':r[0]==='local'?'car':'spark')}<div><div class="cat">${r[1]}</div><div class="note">Simulated estimate</div></div><div class="amt">${money(r[2])}</div></div>`).join('')}</div></div><div class="budfoot"><div class="rem">Budget: <b>${P.budgetINR?money(P.budgetINR):'—'}</b></div><button class="btn btn-flame" onclick="A.setMode('cheapest')">Make it cheaper ${ic2('arrow')}</button></div><div class="regbox"><h4>Source registry</h4><div class="reggrid">${Object.entries(REGISTRY).map(([k,v])=>`<div class="regcol"><b>${k}</b>${v.map(x=>`<span>${esc(x[0])}<i class="dots">${'•'.repeat(x[2])}</i></span>`).join('')}</div>`).join('')}</div></div>`;
+}
+function renderMap(){
+  const el=$('#mapEl');if(!el||typeof L==='undefined')return;
+  if(window.__voyaraMap)window.__voyaraMap.remove();
+  const m=L.map(el,{scrollWheelZoom:false}).setView(P.prof.center||[20,78],P.prof.zoom||8);window.__voyaraMap=m;
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(m);
+  const add=(lat,lng,title,kind)=>L.circleMarker([lat,lng],{radius:8,weight:2,fillOpacity:.9}).addTo(m).bindPopup(`<b>${esc(title)}</b><br>${esc(kind)}`);
+  if(P.sel.hotel)add(P.sel.hotel.lat,P.sel.hotel.lng,P.sel.hotel.name,'Stay');
+  P.activities.forEach(a=>add(a.lat,a.lng,a.name,'Attraction'));
+  P.restaurants.forEach(r=>add(r.lat,r.lng,r.name,'Food'));
+  $('#dayToggles').innerHTML=P.itin.map((d,i)=>`<button class="${i===S.daySel?'on':''}" onclick="A.selectDay(${i})">Day ${i+1}</button>`).join('');
+}
+function renderAssistant(){
+  const host=$('#assistHost');if(!host)return;
+  host.innerHTML=`<button class="abtn" onclick="A.toggleAssistant()" aria-label="Open travel assistant">${ic2('bot')}</button><div class="apanel hide" id="aPanel"><div class="hd"><div class="ava">${ic2('bot')}</div><div><b>Maya</b><small>Trip assistant</small></div></div><div class="abody" id="aBody"><div class="bubble agent">Your ${esc(P.prof.name)} plan is ready. Ask me to make it cheaper, slower, more adventurous, or change the stay.</div></div><div class="asugg"><button onclick="A.ask('Make it cheaper')">Make it cheaper</button><button onclick="A.ask('More relaxed')">More relaxed</button><button onclick="A.ask('More adventure')">More adventure</button></div><div class="ainput"><input id="aInput" placeholder="Ask Maya…" onkeydown="if(event.key==='Enter')A.ask(this.value)"><button onclick="A.ask($('#aInput').value)">${ic2('arrow')}</button></div></div>`;
+}
+
+const A={
+ go(screen){if(screen==='landing'){S.step=0;renderLanding()}else if(screen==='onboard'){renderOnboard()}else if(screen==='results'){if(P.prof)renderResults()}},
+ start(){S.step=0;renderOnboard()},
+ pickDest(k){S.trip.destinations=[DEST[k]?.name||k];S.trip.amount='';S.step=0;renderOnboard()},
+ sample(){S.trip={...S.trip,origin:'Delhi',destinations:['Jaipur'],depDate:plusDays(14),retDate:plusDays(19),amount:'50000',adults:2,children:0};S.step=7;renderOnboard()},
+ gotoStep(i){S.step=clamp(i,0,OB.length-1);renderOnboard()},
+ obBack(){if(S.step===0)renderLanding();else{S.step--;renderOnboard()}},
+ obNext(){if(!validateStep(S.step))return;S.step++;renderOnboard()},
+ upd(path,val){setPath(S,path,val);if(path==='trip.depDate'&&S.trip.retDate&&S.trip.retDate<S.trip.depDate){S.trip.retDate=''}},
+ set(path,val){setPath(S,path,val);renderOnboard()},
+ seg(path,val){setPath(S,path,val);renderOnboard()},
+ setCur(c){S.trip.currency=c;renderOnboard()},
+ qfill(kind,val){if(kind==='origin')S.trip.origin=val;else if(kind==='amount')S.trip.amount=String(val);renderOnboard()},
+ qfillDest(k){const name=DEST[k]?.name||k;if(!S.trip.destinations.includes(name))S.trip.destinations.push(name);renderOnboard()},
+ addDest(){const el=$('#f_dest');if(!el)return;const v=el.value.trim();if(v&&!S.trip.destinations.includes(v))S.trip.destinations.push(v);renderOnboard()},
+ rmDest(i){S.trip.destinations.splice(i,1);renderOnboard()},
+ step2(k,d){S.trip[k]=Math.max(k==='adults'?1:0,Math.min(12,S.trip[k]+d));renderOnboard()},
+ toggleMode(m){const a=S.trip.transport.modes,i=a.indexOf(m);i<0?a.push(m):a.splice(i,1);renderOnboard()},
+ toggleAmen(a){const x=S.trip.stay.amen,i=x.indexOf(a);i<0?x.push(a):x.splice(i,1);renderOnboard()},
+ toggleArr(path,val){const a=path.split('.').reduce((o,k)=>o[k],S),i=a.indexOf(val);i<0?a.push(val):a.splice(i,1);renderOnboard()},
+ pushArr(path,val){const a=path.split('.').reduce((o,k)=>o[k],S);if(!a.includes(val))a.push(val);renderOnboard()},
+ addArr(path,id){const el=$('#'+id),v=el?.value.trim();if(!v)return;A.pushArr(path,v)},
+ rmArr(path,i){const a=path.split('.').reduce((o,k)=>o[k],S);a.splice(i,1);renderOnboard()},
+ toggleScope(k){S.trip.scope[k]=!S.trip.scope[k];S.scopeTouched=true;const el=document.querySelector(`[data-scope="${k}"]`);if(el)el.classList.toggle('on',S.trip.scope[k])},
+ async startResearch(){if(!validateAll())return;await startResearch()},
+ skipResearch(){if(S._skip)S._skip();else renderResults()},
+ setMode(mode){S.mode=mode;computePlan(mode);renderResults();toast(`Optimised for ${mode}`,'spark')},
+ goSec(id,btn){const el=$('#sec-'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});if(btn){$$('#rtabs button').forEach(b=>b.classList.remove('on'));btn.classList.add('on')}},
+ selectHotel(id){const h=P.hotels.find(x=>x.id===id);if(h){P.sel.hotel=h;computePlan(S.mode);paintResults()}},
+ selectTransport(id){const tr=P.transport.find(x=>x.id===id);if(tr){P.sel.transport=tr;computePlan(S.mode);paintResults()}},
+ filterTransport(m){S._tfilter=m;renderTransport()},
+ selectDay(i){S.daySel=i;renderMap()},
+ toggleAssistant(){const p=$('#aPanel');if(p)p.classList.toggle('hide')},
+ ask(q){q=String(q||'').trim();if(!q)return;const b=$('#aBody');if(!b)return;const u=document.createElement('div');u.className='bubble user';u.textContent=q;b.appendChild(u);let reply='I can adjust the demo plan. Try “make it cheaper”, “more relaxed”, or “more adventure”.';const l=q.toLowerCase();if(l.includes('cheaper')){S.mode='cheapest';computePlan('cheapest');reply='Done — I re-optimised around lower cost.'}else if(l.includes('relax')){S.flags.relaxed=true;computePlan(S.mode);reply='Done — I removed the optional late/nightlife stops and kept more breathing room.'}else if(l.includes('adventure')){S.mode='experience';computePlan('experience');reply='Done — I pushed the plan toward experiences and interest matches.'}paintResults();setTimeout(()=>{const a=document.createElement('div');a.className='bubble agent';a.textContent=reply;b.appendChild(a);b.scrollTop=b.scrollHeight},300)},
+ mclose(){const h=$('#modalHost');if(h)h.innerHTML=''}
+};
+window.A=A;
+function validateStep(i){
+  const t=S.trip;
+  if(i===0){if(!t.origin.trim()){toast('Add your starting city','x');return false}if(!t.destinations.length){toast('Pick at least one destination','x');return false}if(!t.depDate||!t.retDate){toast('Choose both travel dates','x');return false}if(t.retDate<=t.depDate){toast('Return date must be after departure','x');return false}}
+  if(i===1&&!t.amount){toast('Add a budget amount','x');return false}
+  if(i===5&&t.interests.length+t.customInterests.length<3){toast('Pick at least three interests','x');return false}
+  return true;
+}
+function validateAll(){return [0,1,5].every(validateStep)}
+
+renderLanding();
+</script>
+</body>
+</html>
